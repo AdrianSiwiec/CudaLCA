@@ -1,0 +1,59 @@
+copyToStudent.sh
+copyFromStudent.sh
+fromStudent/*
+.vscode/*
+cmake-build-debug/*
+
+#big tests
+tests/randSimple10M.in
+tests/randSimple1M.out
+tests/randSimple10M.out
+tests/randSimple1M.in
+
+
+# Created by https://www.gitignore.io/api/cuda,clion
+
+.idea/*
+
+# IntelliJ
+/out/
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+
+# JIRA plugin
+atlassian-ide-plugin.xml
+
+# Cursive Clojure plugin
+.idea/replstate.xml
+
+# Ruby plugin and RubyMine
+/.rakeTasks
+
+# Crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+### CLion Patch ###
+# Comment Reason: https://github.com/joeblau/gitignore.io/issues/186#issuecomment-215987721
+
+# *.iml
+# modules.xml
+# .idea/misc.xml
+# *.ipr
+
+# Sonarlint plugin
+.idea/sonarlint
+
+### CUDA ###
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbin
+
+
+# End of https://www.gitignore.io/api/cuda,clion
