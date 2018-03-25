@@ -9,55 +9,58 @@ void dfs( int i );
 vector<int> *G;
 int *depth;
 int *father;
-int *answers;
 int *queries;
 
-int main()
+int main( int argc, char *argv[] )
 {
-  ios_base::sync_with_stdio( 0 );
-
   Timer timer = Timer();
   timer.measureTime();
 
-  int V;
-  cin >> V;
+  TestCase tc;
+  if ( argc == 1 )
+  {
+    tc = readFromStdIn();
+  }
+  else
+  {
+    tc = readFromFile( argv[1] );
+  }
+
+  timer.measureTime( "Read Input" );
+
+  int V = tc.tree.V;
+  int root = tc.tree.root;
 
   G = new vector<int>[V];
   depth = new int[V];
   father = new int[V];
 
-  for ( int i = 1; i < V; i++ )
+  for ( int i = 0; i < V; i++ )
   {
-    int tmp;
-    cin >> tmp;
+    depth[i] = 0;
+    int tmp = tc.tree.father[i];
     father[i] = tmp;
-    G[tmp].push_back( i );
+    if ( tmp != -1 ) G[tmp].push_back( i );
   }
 
-  timer.measureTime( "Read Input" );
+  timer.measureTime( "Parse Input" );
 
-  depth[0] = 0;
-  dfs( 0 );
+  depth[root] = 0;
+  dfs( root );
 
   timer.measureTime( "Preprocessing" );
 
-  //   for ( int i = 0; i < V; i++ )
-  //   {
-  //     cout << i << ": " << depth[i] << endl;
-  //   }
+  // for ( int i = 0; i < V; i++ )
+  // {
+  //   cout << i << ": " << depth[i] << endl;
+  // }
 
-  int Q;
-  cin >> Q;
+  int Q = tc.q.N;
 
-  queries = new int[2 * Q];
-  answers = new int[Q];
+  queries = tc.q.tab.data();
+  vector<int> answers;
+  answers.resize( Q );
 
-  for ( int i = 0; i < Q; i++ )
-  {
-    cin >> queries[i * 2] >> queries[i * 2 + 1];
-  }
-
-  timer.measureTime( "Read Queries" );
 
   for ( int i = 0; i < Q; i++ )
   {
@@ -82,12 +85,16 @@ int main()
 
   timer.measureTime( "Calculate Queries" );
 
-  for ( int i = 0; i < Q; i++ )
+  if ( argc < 3 )
   {
-    cout << answers[i] << endl;
+    writeAnswersToStdOut( Q, answers.data() );
+  }
+  else
+  {
+    writeAnswersToFile( Q, answers.data(), argv[2] );
   }
 
-  timer.measureTime( "Output Queries" );
+  timer.measureTime( "Output Answers" );
 }
 
 void dfs( int i )

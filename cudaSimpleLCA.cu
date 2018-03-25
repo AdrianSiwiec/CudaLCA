@@ -47,7 +47,7 @@ int main()
 
   timer.measureTime( "Read Input" );
 
-  cudaMemcpy( devFather, father, sizeof( int ) * V, cudaMemcpyHostToDevice );
+  CUCHECK( cudaMemcpy( devFather, father, sizeof( int ) * V, cudaMemcpyHostToDevice ) );
 
   int threadsPerBlockX = 1024;
   int blockPerGridX = ( V + threadsPerBlockX - 1 ) / threadsPerBlockX;
@@ -98,10 +98,10 @@ int main()
 
   timer.measureTime( "Read queries" );
 
-  cudaMalloc( (void **) &devQueries, sizeof( int ) * Q * 2 );
-  cudaMalloc( (void **) &devAnswers, sizeof( int ) * Q );
+  CUCHECK( cudaMalloc( (void **) &devQueries, sizeof( int ) * Q * 2 ) );
+  CUCHECK( cudaMalloc( (void **) &devAnswers, sizeof( int ) * Q ) );
 
-  cudaMemcpy( devQueries, queries, sizeof( int ) * Q * 2, cudaMemcpyHostToDevice );
+  CUCHECK( cudaMemcpy( devQueries, queries, sizeof( int ) * Q * 2, cudaMemcpyHostToDevice ) );
 
   timer.measureTime( "Copy Queries to Dev" );
 
@@ -114,7 +114,7 @@ int main()
 
   int *answers = (int *) malloc( sizeof( int ) * Q );
 
-  cudaMemcpy( answers, devAnswers, sizeof( int ) * Q, cudaMemcpyDeviceToHost );
+  CUCHECK( cudaMemcpy( answers, devAnswers, sizeof( int ) * Q, cudaMemcpyDeviceToHost ) );
 
   timer.measureTime( "Copy answers to Host" );
 
@@ -125,8 +125,6 @@ int main()
 
   timer.measureTime( "Write Output" );
 }
-
-#include <cstdio>
 
 __global__ void cuInit( int V, int *father, int *next, int *depth )
 {

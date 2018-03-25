@@ -4,13 +4,16 @@ NVCCFLAGS=-arch sm_50 -O2 -Xptxas -dlcm=ca
 CXX=g++
 CXXFLAGS=-std=c++11 -O2 -fno-stack-protector
 
-all: cudaSimpleLCA.e cpuSimpleLCA.e
+all: cudaSimpleLCA.e cpuSimpleLCA.e generateSimple.e
 
 cpuSimpleLCA.e: cpuSimpleLCA.o commons.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 cudaSimpleLCA.e: cudaSimpleLCA.cu commons.o cudaCommons.o
 	$(NVCC) $^ -o $@
+
+generateSimple.e: generateSimple.o commons.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
 %.o: %.cu %.h
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@

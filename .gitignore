@@ -1,15 +1,14 @@
 copyToStudent.sh
 copyFromStudent.sh
+tests/*
 fromStudent/*
 .vscode/*
 cmake-build-debug/*
+out
 
-#big tests
-tests/randSimple10M.in
-tests/randSimple1M.out
-tests/randSimple10M.out
-tests/randSimple1M.in
-
+#binaries
+*.o
+*.e
 
 # Created by https://www.gitignore.io/api/cuda,clion
 
