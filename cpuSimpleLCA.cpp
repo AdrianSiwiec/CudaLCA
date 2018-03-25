@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include "../common/time.cpp"
+#include "commons.h"
 
 using namespace std;
 
@@ -16,7 +16,8 @@ int main()
 {
   ios_base::sync_with_stdio( 0 );
 
-  measureTime();
+  Timer timer = Timer();
+  timer.measureTime();
 
   int V;
   cin >> V;
@@ -33,12 +34,12 @@ int main()
     G[tmp].push_back( i );
   }
 
-  measureTime( "Read Input" );
+  timer.measureTime( "Read Input" );
 
   depth[0] = 0;
   dfs( 0 );
 
-  measureTime( "Preprocessing" );
+  timer.measureTime( "Preprocessing" );
 
   //   for ( int i = 0; i < V; i++ )
   //   {
@@ -56,7 +57,7 @@ int main()
     cin >> queries[i * 2] >> queries[i * 2 + 1];
   }
 
-  measureTime( "Read Queries" );
+  timer.measureTime( "Read Queries" );
 
   for ( int i = 0; i < Q; i++ )
   {
@@ -79,14 +80,14 @@ int main()
     answers[i] = p;
   }
 
-  measureTime( "Calculate Queries" );
+  timer.measureTime( "Calculate Queries" );
 
   for ( int i = 0; i < Q; i++ )
   {
     cout << answers[i] << endl;
   }
 
-  measureTime( "Output Queries" );
+  timer.measureTime( "Output Queries" );
 }
 
 void dfs( int i )

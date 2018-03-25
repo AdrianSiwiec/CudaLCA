@@ -1,9 +1,11 @@
-#include <iostream>
-using namespace std;
+#include "commons.h"
 
-static clock_t prevTime;
+Timer::Timer()
+{
+  prevTime = clock();
+}
 
-void measureTime( string msg = "" )
+void Timer::measureTime( string msg )
 {
   clock_t now = clock();
   if ( msg.size() > 0 )
@@ -11,5 +13,6 @@ void measureTime( string msg = "" )
     cerr.precision( 3 );
     cerr << "\"" << msg << "\" took " << double( now - prevTime ) / CLOCKS_PER_SEC << "s" << endl;
   }
+
   prevTime = now;
 }
