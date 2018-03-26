@@ -11,11 +11,21 @@ __global__ void cuMoveNextRead( int V, int *next, int *tmp );
 __global__ void cuMoveNextWrite( int V, int *next, int *tmp, int *notAllDone );
 __global__ void cuCalcQueries( int Q, int *father, int *depth, int *queries, int *answers );
 
-int main()
+int main( int argc, char *argv[] )
 {
-  ios_base::sync_with_stdio( 0 );
-
   Timer timer = Timer();
+
+  TestCase tc;
+  if ( argc == 1 )
+  {
+    tc = readFromStdIn();
+  }
+  else
+  {
+    tc = readFromFile( argv[1] );
+  }
+
+  timer.measureTime( "Read Input" );
 
   int *devFather;
   int *devDepth;
@@ -25,10 +35,7 @@ int main()
   int *devAnswers;
   int *devTmp;
 
-  int V;
-  cin >> V;
-  int *father = (int *) malloc( sizeof( int ) * V );
-
+  const int V = tc.tree.V;
 
   CUCHECK( cudaMalloc( (void **) &devFather, sizeof( int ) * V ) );
   CUCHECK( cudaMalloc( (void **) &devDepth, sizeof( int ) * V ) );
@@ -39,15 +46,7 @@ int main()
 
   timer.measureTime( "Cuda Allocs" );
 
-  for ( int i = 1; i < V; i++ )
-  {
-    cin >> father[i];
-  }
-  father[0] = -1;
-
-  timer.measureTime( "Read Input" );
-
-  CUCHECK( cudaMemcpy( devFather, father, sizeof( int ) * V, cudaMemcpyHostToDevice ) );
+  CUCHECK( cudaMemcpy( devFather, tc.tree.father.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
 
   int threadsPerBlockX = 1024;
   int blockPerGridX = ( V + threadsPerBlockX - 1 ) / threadsPerBlockX;
@@ -88,20 +87,12 @@ int main()
   //     cout << i << ": " << depth[i] << endl;
   //   }
 
-  int Q;
-  cin >> Q;
-  int *queries = (int *) malloc( sizeof( int ) * Q * 2 );
-  for ( int i = 0; i < Q; i++ )
-  {
-    cin >> queries[2 * i] >> queries[2 * i + 1];
-  }
-
-  timer.measureTime( "Read queries" );
+  int Q = tc.q.N;
 
   CUCHECK( cudaMalloc( (void **) &devQueries, sizeof( int ) * Q * 2 ) );
   CUCHECK( cudaMalloc( (void **) &devAnswers, sizeof( int ) * Q ) );
 
-  CUCHECK( cudaMemcpy( devQueries, queries, sizeof( int ) * Q * 2, cudaMemcpyHostToDevice ) );
+  CUCHECK( cudaMemcpy( devQueries, tc.q.tab.data(), sizeof( int ) * Q * 2, cudaMemcpyHostToDevice ) );
 
   timer.measureTime( "Copy Queries to Dev" );
 
@@ -118,9 +109,13 @@ int main()
 
   timer.measureTime( "Copy answers to Host" );
 
-  for ( int i = 0; i < Q; i++ )
+  if ( argc < 3 )
   {
-    cout << answers[i] << endl;
+    writeAnswersToStdOut( Q, answers );
+  }
+  else
+  {
+    writeAnswersToFile( Q, answers, argv[2] );
   }
 
   timer.measureTime( "Write Output" );
