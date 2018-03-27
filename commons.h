@@ -49,10 +49,24 @@ struct TestCase
   void writeToStream( ofstream &out );
 };
 
+int getEdgeCode( int a, bool toFather ); // edge father[a]->a or a->father[a]
+int getEdgeStart( ParentsTree &tree, int edgeCode );
+int getEdgeEnd( ParentsTree &tree, int edgeCode );
+
+struct EulerPath
+{
+  int firstEdge;
+  vector<int> next;
+
+  EulerPath();
+  EulerPath( int firstEdge, const vector<int> &next );
+  EulerPath( ParentsTree &tree );
+};
+
 void writeToFile( TestCase &tc, const char *filename );
 void writeToStdOut( TestCase &tc );
 TestCase readFromFile( const char *filename );
 TestCase readFromStdIn();
 
 void writeAnswersToFile( int Q, int *ans, const char *filename );
-void writeAnswersToStdOut( int Q, int *ans);
+void writeAnswersToStdOut( int Q, int *ans );

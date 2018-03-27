@@ -61,6 +61,68 @@ void TestCase::writeToStream( ofstream &out )
   q.writeToStream( out );
 }
 
+int getEdgeCode( int a, bool toFather )
+{
+  return a * 2 + toFather;
+}
+int getEdgeStart( ParentsTree &tree, int edgeCode )
+{
+  if ( edgeCode % 2 )
+    return edgeCode / 2;
+  else
+    return tree.father[edgeCode / 2];
+}
+int getEdgeEnd( ParentsTree &tree, int edgeCode )
+{
+  return getEdgeStart( tree, edgeCode ^ 1 );
+}
+
+EulerPath::EulerPath() : firstEdge( 0 ), next( vector<int>() ) {}
+EulerPath::EulerPath( int firstEdge, const vector<int> &next ) : firstEdge( firstEdge ), next( next ) {}
+EulerPath::EulerPath( ParentsTree &tree )
+{
+  next.resize( tree.V * 2, -1 );
+
+  vector<int> lastEdges( tree.V, -1 );
+  vector<int> firstEdges( tree.V, -1 );
+
+  for ( int i = 0; i < tree.V; i++ )
+  {
+    int father = tree.father[i];
+    if ( father == -1 ) continue;
+
+    if ( lastEdges[father] == -1 )
+    {
+      firstEdges[father] = getEdgeCode( i, 0 );
+    }
+    else
+    {
+      next[lastEdges[father]] = getEdgeCode( i, 0 );
+    }
+
+    lastEdges[father] = getEdgeCode( i, 1 );
+  }
+
+
+  for ( int i = 0; i < tree.V; i++ )
+  {
+    int father = tree.father[i];
+    if ( father == -1 )
+    {
+      firstEdge = firstEdges[i];
+    }
+    if ( firstEdges[i] == -1 )
+    {
+      next[getEdgeCode( i, 0 )] = getEdgeCode( i, 1 );
+    }
+    else
+    {
+      next[getEdgeCode( i, 0 )] = firstEdges[i];
+      next[lastEdges[i]] = getEdgeCode( i, 1 );
+    }
+  }
+}
+
 void writeToFile( TestCase &tc, const char *filename )
 {
   ofstream out( filename, ios::binary );

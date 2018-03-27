@@ -1,19 +1,19 @@
+#include <cuda_runtime.h>
 #include <iostream>
+#include <moderngpu/transform.hxx>
 #include "commons.h"
 #include "cudaCommons.h"
 
 using namespace std;
+using namespace mgpu;
 
-__global__ void cuInit( int V, int *father, int *next, int *depth );
-__global__ void cuCalcDepthRead( int V, int *next, int *depth, int *tmp, int *notAllDone );
-__global__ void cuCalcDepthWrite( int V, int *next, int *depth, int *tmp );
-__global__ void cuMoveNextRead( int V, int *next, int *tmp );
-__global__ void cuMoveNextWrite( int V, int *next, int *tmp, int *notAllDone );
 __global__ void cuCalcQueries( int Q, int *father, int *depth, int *queries, int *answers );
 
 int main( int argc, char *argv[] )
 {
   Timer timer = Timer();
+
+  standard_context_t context( 0 );
 
   TestCase tc;
   if ( argc == 1 )
@@ -30,19 +30,14 @@ int main( int argc, char *argv[] )
   int *devFather;
   int *devDepth;
   int *devNext;
-  int *devNotAllDone;
   int *devQueries;
   int *devAnswers;
-  int *devTmp;
 
   const int V = tc.tree.V;
 
   CUCHECK( cudaMalloc( (void **) &devFather, sizeof( int ) * V ) );
   CUCHECK( cudaMalloc( (void **) &devDepth, sizeof( int ) * V ) );
   CUCHECK( cudaMalloc( (void **) &devNext, sizeof( int ) * V ) );
-  CUCHECK( cudaMalloc( (void **) &devTmp, sizeof( int ) * V ) );
-
-  CUCHECK( cudaMalloc( (void **) &devNotAllDone, sizeof( int ) ) );
 
   timer.measureTime( "Cuda Allocs" );
 
@@ -51,41 +46,21 @@ int main( int argc, char *argv[] )
   int threadsPerBlockX = 1024;
   int blockPerGridX = ( V + threadsPerBlockX - 1 ) / threadsPerBlockX;
 
-  cuInit<<<blockPerGridX, threadsPerBlockX>>>( V, devFather, devNext, devDepth );
-  CUCHECK( cudaDeviceSynchronize() );
+  transform(
+      [=] MGPU_DEVICE( int thid ) {
+        devNext[thid] = devFather[thid];
+        devDepth[thid] = 0;
+      },
+      V,
+      context );
+
+  context.synchronize();
 
   timer.measureTime( "Copy Input and Init data" );
 
-  int *notAllDone = (int *) malloc( sizeof( int ) );
-  do
-  {
-    cuCalcDepthRead<<<blockPerGridX, threadsPerBlockX>>>( V, devNext, devDepth, devTmp, devNotAllDone );
-    CUCHECK( cudaDeviceSynchronize() );
-
-    cuCalcDepthWrite<<<blockPerGridX, threadsPerBlockX>>>( V, devNext, devDepth, devTmp );
-    CUCHECK( cudaDeviceSynchronize() );
-
-    cuMoveNextRead<<<blockPerGridX, threadsPerBlockX>>>( V, devNext, devTmp );
-    CUCHECK( cudaDeviceSynchronize() );
-
-    cuMoveNextWrite<<<blockPerGridX, threadsPerBlockX>>>( V, devNext, devTmp, devNotAllDone );
-    CUCHECK( cudaDeviceSynchronize() );
-
-    CUCHECK( cudaMemcpy( notAllDone, devNotAllDone, sizeof( int ), cudaMemcpyDeviceToHost ) );
-
-  } while ( *notAllDone );
+  CudaListRank( devDepth, V, devNext, threadsPerBlockX, blockPerGridX );
 
   timer.measureTime( "Cuda Preprocessing" );
-
-  // int *depth = (int *) malloc( sizeof( int ) * V );
-
-  // res = cuMemcpyDtoH( depth, devDepth, sizeof( int ) * V );
-  // testRes( res, "Copy devDepth to host" );
-
-  //   for ( int i = 0; i < V; i++ )
-  //   {
-  //     cout << i << ": " << depth[i] << endl;
-  //   }
 
   int Q = tc.q.N;
 
@@ -119,55 +94,6 @@ int main( int argc, char *argv[] )
   }
 
   timer.measureTime( "Write Output" );
-}
-
-__global__ void cuInit( int V, int *father, int *next, int *depth )
-{
-  int thid = ( blockIdx.x * blockDim.x ) + threadIdx.x;
-
-  if ( thid >= V ) return;
-
-  next[thid] = father[thid];
-  depth[thid] = 0;
-}
-
-__global__ void cuCalcDepthRead( int V, int *next, int *depth, int *tmp, int *notAllDone )
-{
-  int thid = ( blockIdx.x * blockDim.x ) + threadIdx.x;
-  if ( thid == 0 ) *notAllDone = 0;
-
-  if ( thid >= V || next[thid] == -1 ) return;
-
-  tmp[thid] = depth[next[thid]] + 1;
-}
-
-__global__ void cuCalcDepthWrite( int V, int *next, int *depth, int *tmp )
-{
-  int thid = ( blockIdx.x * blockDim.x ) + threadIdx.x;
-
-  if ( thid >= V || next[thid] == -1 ) return;
-
-  depth[thid] += tmp[thid];
-}
-
-__global__ void cuMoveNextRead( int V, int *next, int *tmp )
-{
-  int thid = ( blockIdx.x * blockDim.x ) + threadIdx.x;
-
-  if ( thid >= V || next[thid] == -1 ) return;
-
-  tmp[thid] = next[next[thid]];
-}
-
-__global__ void cuMoveNextWrite( int V, int *next, int *tmp, int *notAllDone )
-{
-  int thid = ( blockIdx.x * blockDim.x ) + threadIdx.x;
-
-  if ( thid >= V || next[thid] == -1 ) return;
-
-  next[thid] = tmp[thid];
-
-  *notAllDone = 1;
 }
 
 __global__ void cuCalcQueries( int Q, int *father, int *depth, int *queries, int *answers )

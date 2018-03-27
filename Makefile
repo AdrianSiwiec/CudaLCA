@@ -1,16 +1,22 @@
 NVCC=/usr/local/cuda/bin/nvcc
-NVCCFLAGS=-arch sm_50 -O2 -Xptxas -dlcm=ca
+NVCCFLAGS=-std=c++11 -arch sm_50 -O2 -Xptxas -dlcm=ca --expt-extended-lambda -I ../moderngpu/src
 
 CXX=g++
-CXXFLAGS=-std=c++11 -O2 -fno-stack-protector
+CXXFLAGS=-std=c++11 -O2 -fno-stack-protector 
 
-all: cudaSimpleLCA.e cpuSimpleLCA.e generateSimple.e
+all: cudaInlabelLCA.e cudaSimpleLCA.e cpuSimpleLCA.e generateSimple.e
+
+hello.e: hello.cu
+	$(NVCC) $(NVCCFLAGS) $^ -o $@
 
 cpuSimpleLCA.e: cpuSimpleLCA.o commons.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
+cudaInlabelLCA.e: cudaInlabelLCA.cu commons.o cudaCommons.o
+	$(NVCC) $(NVCCFLAGS) $^ -o $@
+
 cudaSimpleLCA.e: cudaSimpleLCA.cu commons.o cudaCommons.o
-	$(NVCC) $^ -o $@
+	$(NVCC) $(NVCCFLAGS) $^ -o $@
 
 generateSimple.e: generateSimple.o commons.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
