@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <iostream>
 #include "commons.h"
 
@@ -14,21 +13,19 @@ int main( int argc, char* argv[] )
   int V = atoi( argv[1] );
   int Q = atoi( argv[2] );
 
-  srand( 241342 + V + Q );
-
   vector<int> tab;
   tab.push_back( -1 );
   for ( int i = 1; i < V; i++ )
   {
-    tab.push_back( rand() % i );
+    tab.push_back( i - ( rand() % ( min( i, 10 ) ) ) - 1 );
   }
 
-  vector<int> father;
+  vector<int> fathers;
   int root;
 
-  shuffleFathers( tab, father, root );
+  shuffleFathers( tab, fathers, root );
 
-  ParentsTree tree( V, root, father );
+  ParentsTree tree( V, root, fathers );
 
   vector<int> q;
   for ( int i = 0; i < Q * 2; i++ )
@@ -38,6 +35,7 @@ int main( int argc, char* argv[] )
   Queries queries( Q, q );
 
   TestCase tc( tree, queries );
+
   if ( argc == 4 )
     writeToFile( tc, argv[3] );
   else

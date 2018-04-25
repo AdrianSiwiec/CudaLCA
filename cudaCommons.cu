@@ -84,7 +84,21 @@ void CudaAssert( cudaError_t error, const char *code, const char *file, int line
 {
   if ( error != cudaSuccess )
   {
-    cerr << "Cuda error :" << code << ", " << file << ":" << endl;
+        cerr << "Cuda error :" << code << ", " << file << ":" << error << endl;
     exit( 1 );
   }
+}
+
+void CudaPrintTab( int *tab, int size )
+{
+  int *tmp = (int *) malloc( sizeof( int ) * size );
+  CUCHECK( cudaMemcpy( tmp, tab, sizeof( int ) * size, cudaMemcpyDeviceToHost ) );
+
+  for ( int i = 0; i < size; i++ )
+  {
+    cerr << tmp[i] << " ";
+  }
+  cerr << endl;
+
+  free( tmp );
 }

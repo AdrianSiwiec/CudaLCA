@@ -1,4 +1,5 @@
 #include "commons.h"
+#include <algorithm>
 #include <fstream>
 
 using namespace std;
@@ -77,9 +78,9 @@ int getEdgeEnd( ParentsTree &tree, int edgeCode )
   return getEdgeStart( tree, edgeCode ^ 1 );
 }
 
-EulerPath::EulerPath() : firstEdge( 0 ), next( vector<int>() ) {}
-EulerPath::EulerPath( int firstEdge, const vector<int> &next ) : firstEdge( firstEdge ), next( next ) {}
-EulerPath::EulerPath( ParentsTree &tree )
+NextEdgeTree::NextEdgeTree() : firstEdge( 0 ), next( vector<int>() ) {}
+NextEdgeTree::NextEdgeTree( int firstEdge, const vector<int> &next ) : firstEdge( firstEdge ), next( next ) {}
+NextEdgeTree::NextEdgeTree( ParentsTree &tree )
 {
   next.resize( tree.V * 2, -1 );
 
@@ -178,4 +179,32 @@ void writeAnswersToFile( int Q, int *ans, const char *filename )
 {
   ofstream out( filename, ios::binary );
   out.write( (char *) ans, sizeof( int ) * Q );
+}
+
+void shuffleFathers( vector<int> &in, vector<int> &out, int &root )
+{
+  int V = in.size();
+  vector<int> shuffle;
+  for ( int i = 0; i < V; i++ )
+  {
+    shuffle.push_back( i );
+  }
+  random_shuffle( shuffle.begin(), shuffle.end() );
+
+  vector<int> newPos;
+  newPos.resize( V );
+  for ( int i = 0; i < V; i++ )
+  {
+    newPos[shuffle[i]] = i;
+  }
+
+  out.clear();
+  for ( int i = 0; i < V; i++ )
+  {
+    if ( shuffle[i] == 0 )
+    {
+      root = i;
+    }
+    out.push_back( in[shuffle[i]] == -1 ? -1 : newPos[in[shuffle[i]]] );
+  }
 }

@@ -1,12 +1,17 @@
-toTest="cudaSimpleLCA"
+#toTest="cudaSimpleLCA"
+toTest="cudaInlabelLCA"
 
+echo "Generating Tests"
 ./generateTests.sh >/dev/null
+echo "Generating Answers"
 ./generateAnswers.sh >/dev/null
+
 make $toTest.e
 
 for i in $(ls tests/*.b.in); do
     outName=${i::-3}.out
     ./$toTest.e $i out 2>/dev/null
+    echo "Testing on $i"
     if diff out $outName >/dev/null; then
         echo "$i OK"
     else
