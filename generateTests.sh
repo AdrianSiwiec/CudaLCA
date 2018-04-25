@@ -40,10 +40,10 @@ genBin Simple 1000 1000
 genBin Simple 1000000 1000000
 genBin Simple 2000000 2000000
 genBin Simple 3000000 3000000
-genBin Simple 10000000 10000000
+# genBin Simple 10000000 10000000
 
-genBin LongSimple 10000 10000
-genBin LongSimple 100000 100000
-genBin LongSimple 1000000 1000000
+# genBin LongSimple 10000 10000
+# genBin LongSimple 100000 100000
+# genBin LongSimple 1000000 1000000
 
 echo "OK"

@@ -2,9 +2,9 @@
 toTest="cudaInlabelLCA"
 
 echo "Generating Tests"
-./generateTests.sh >/dev/null
+./generateTests.sh 
 echo "Generating Answers"
-./generateAnswers.sh >/dev/null
+./generateAnswers.sh 
 
 make $toTest.e
 
