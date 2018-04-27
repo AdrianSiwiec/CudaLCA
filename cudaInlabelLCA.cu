@@ -34,7 +34,7 @@ int main( int argc, char *argv[] )
 
   NextEdgeTree path( tc.tree );
 
-  timer.measureTime( "Generating Next Edge Tree from input" ); //TODO: make inputs in this format
+  timer.measureTime( "Generating Next Edge Tree from input" );  // TODO: make inputs in this format
 
   const int V = tc.tree.V;
   const int root = tc.tree.root;
@@ -57,9 +57,15 @@ int main( int argc, char *argv[] )
 
   timer.measureTime( "Copy Input to Dev and Init data" );
 
-  CudaListRank( devEdgeRank, V * 2, devNextEdge, threadsPerBlockX, blocksPerGridX );
+  // CudaSimpleListRank( devEdgeRank, V * 2, devNextEdge, threadsPerBlockX, blocksPerGridX );
+  CudaFastListRank( devEdgeRank, V * 2, path.firstEdge, devNextEdge, context );
 
   timer.measureTime( "Edges List Rank" );
+
+  int *edgeRank = new int[V * 2];
+  CUCHECK( cudaMemcpy( edgeRank, devEdgeRank, sizeof( int ) * V * 2, cudaMemcpyDeviceToHost ) );
+
+  timer.measureTime("Copy Ranks to Host");
 
   int *devSortedEdges;
 
@@ -69,7 +75,9 @@ int main( int argc, char *argv[] )
 
   transform(
       [=] MGPU_DEVICE( int thid ) {
-        int edgeRank = E - devEdgeRank[thid];
+        // int edgeRank = E - devEdgeRank[thid];
+        int edgeRank = devEdgeRank[thid] - 1;
+
         devEdgeRank[thid] = edgeRank;
 
         if ( edgeRank == -1 || edgeRank == V * 2 - 1 ) return;  // edges from root
@@ -218,7 +226,6 @@ int main( int argc, char *argv[] )
   int Q = tc.q.N;
 
   int *devQueries;
-  cerr << Q << endl;
   CUCHECK( cudaMalloc( (void **) &devQueries, sizeof( int ) * Q * 2 ) );
   CUCHECK( cudaMemcpy( devQueries, tc.q.tab.data(), sizeof( int ) * Q * 2, cudaMemcpyHostToDevice ) );
 

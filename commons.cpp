@@ -4,7 +4,7 @@
 
 using namespace std;
 
-Timer::Timer()
+Timer::Timer( string prefix ) : prefix( prefix )
 {
   prevTime = clock();
 }
@@ -15,6 +15,7 @@ void Timer::measureTime( string msg )
   if ( msg.size() > 0 )
   {
     cerr.precision( 3 );
+    if ( prefix != "" ) cerr << prefix << " ";
     cerr << "\"" << msg << "\" took " << double( now - prevTime ) / CLOCKS_PER_SEC << "s" << endl;
   }
 
@@ -110,7 +111,7 @@ NextEdgeTree::NextEdgeTree( ParentsTree &tree )
     int father = tree.father[i];
     if ( father == -1 )
     {
-      firstEdge = firstEdges[i];
+      firstEdge = getEdgeCode( i, 0 );
     }
     if ( firstEdges[i] == -1 )
     {

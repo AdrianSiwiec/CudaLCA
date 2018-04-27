@@ -7,8 +7,9 @@ using namespace std;
 struct Timer
 {
   clock_t prevTime;
+  string prefix;
 
-  Timer();
+  Timer(string prefix = "");
   void measureTime( string msg = "" );
 };
 
@@ -55,7 +56,7 @@ int getEdgeEnd( ParentsTree &tree, int edgeCode );
 
 struct NextEdgeTree
 {
-  int firstEdge;
+  int firstEdge;  //virtual edge that goes to root
   vector<int> next;
 
   NextEdgeTree();
