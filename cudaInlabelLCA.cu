@@ -16,7 +16,8 @@ __device__ bool isEdgeToFather( int edgeCode );
 
 int main( int argc, char *argv[] )
 {
-  Timer timer = Timer();
+  // cudaSetDevice( 1 );
+  Timer timer( "Parse Input" );
 
   standard_context_t context( 0 );
 
@@ -30,11 +31,12 @@ int main( int argc, char *argv[] )
     tc = readFromFile( argv[1] );
   }
 
-  timer.measureTime( "Read Input" );
+  timer.measureTime( "Read" );
 
-  NextEdgeTree path( tc.tree );
+  NextEdgeTree path( tc.tree );  // TODO: clear it up, scratch NextEdgeTree
 
-  timer.measureTime( "Generating Next Edge Tree from input" );  // TODO: make inputs in this format
+  timer.measureTime( "Generate Next Edge Tree" );
+  timer.setPrefix( "Preprocessing" );
 
   const int V = tc.tree.V;
   const int root = tc.tree.root;
@@ -45,27 +47,27 @@ int main( int argc, char *argv[] )
   CUCHECK( cudaMalloc( (void **) &devNextEdge, sizeof( int ) * V * 2 ) );
   CUCHECK( cudaMalloc( (void **) &devEdgeRank, sizeof( int ) * V * 2 ) );
 
-  timer.measureTime( "Cuda Allocs" );
+  timer.measureTime( "Allocs" );
 
   CUCHECK( cudaMemcpy( devNextEdge, path.next.data(), sizeof( int ) * V * 2, cudaMemcpyHostToDevice ) );
 
-  int threadsPerBlockX = 1024;
-  int blocksPerGridX = ( V * 2 + threadsPerBlockX - 1 ) / threadsPerBlockX;
 
   transform( [=] MGPU_DEVICE( int thid ) { devEdgeRank[thid] = 0; }, V * 2, context );
   context.synchronize();
 
   timer.measureTime( "Copy Input to Dev and Init data" );
 
+  // int threadsPerBlockX = 1024;
+  //int blocksPerGridX = ( V * 2 + threadsPerBlockX - 1 ) / threadsPerBlockX;
   // CudaSimpleListRank( devEdgeRank, V * 2, devNextEdge, threadsPerBlockX, blocksPerGridX );
   CudaFastListRank( devEdgeRank, V * 2, path.firstEdge, devNextEdge, context );
 
-  timer.measureTime( "Edges List Rank" );
+  timer.measureTime( "List Rank" );
 
   int *edgeRank = new int[V * 2];
   CUCHECK( cudaMemcpy( edgeRank, devEdgeRank, sizeof( int ) * V * 2, cudaMemcpyDeviceToHost ) );
 
-  timer.measureTime("Copy Ranks to Host");
+  timer.measureTime( "Copy Ranks to Host" );
 
   int *devSortedEdges;
 
@@ -106,6 +108,8 @@ int main( int argc, char *argv[] )
 
   CUCHECK( cudaMemcpy( devFather, tc.tree.father.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
 
+  timer.measureTime( "Inlabel allocs" );
+
   transform(
       [=] MGPU_DEVICE( int thid ) {
         int edge = devSortedEdges[thid];
@@ -125,6 +129,8 @@ int main( int argc, char *argv[] )
 
   scan<scan_type_inc>( devW1, E, devW1Sum, context );
   scan<scan_type_inc>( devW2, E, devW2Sum, context );
+
+  timer.measureTime( "W1 W2 scans" );
 
   int *devPreorder;
   int *devPrePlusSize;
@@ -153,6 +159,8 @@ int main( int argc, char *argv[] )
       context );
 
   context.synchronize();
+
+  timer.measureTime( "Pre PrePlusSize, Level" );
 
   int *devInlabel;
 
@@ -206,6 +214,8 @@ int main( int argc, char *argv[] )
       V,
       context );
 
+  timer.measureTime( "Ascendant scan and calculation" );
+
   int *devHead;
   CUCHECK( cudaMalloc( (void **) &devHead, sizeof( int ) * ( V + 1 ) ) );
 
@@ -221,7 +231,8 @@ int main( int argc, char *argv[] )
 
   context.synchronize();
 
-  timer.measureTime( "Cuda Preprocessing" );
+  timer.measureTime( "Head" );
+  timer.setPrefix( "Queries" );
 
   int Q = tc.q.N;
 
@@ -232,7 +243,7 @@ int main( int argc, char *argv[] )
   int *devAnswers;
   CUCHECK( cudaMalloc( (void **) &devAnswers, sizeof( int ) * Q ) );
 
-  timer.measureTime( "Copy Queries to Dev" );
+  timer.measureTime( "Allocs and copy" );
 
   transform(
       [=] MGPU_DEVICE( int thid ) {
@@ -294,13 +305,14 @@ int main( int argc, char *argv[] )
 
   context.synchronize();
 
-  timer.measureTime( "Calculate Queries" );
+  timer.measureTime( Q );
 
   int *answers = (int *) malloc( sizeof( int ) * Q );
 
   CUCHECK( cudaMemcpy( answers, devAnswers, sizeof( int ) * Q, cudaMemcpyDeviceToHost ) );
 
-  timer.measureTime( "Copy Answers to Host" );
+  timer.measureTime( "Copy to Host" );
+  timer.setPrefix( "Write Output" );
 
   if ( argc < 3 )
   {
@@ -311,7 +323,7 @@ int main( int argc, char *argv[] )
     writeAnswersToFile( Q, answers, argv[2] );
   }
 
-  timer.measureTime( "Write Output" );
+  timer.setPrefix("");
 }
 
 __device__ int CudaGetEdgeStart( int *father, int edgeCode )

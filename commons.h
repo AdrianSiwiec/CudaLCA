@@ -6,11 +6,17 @@ using namespace std;
 
 struct Timer
 {
+  Timer( string prefix);
+  void setPrefix( string prefix );
+  void measureTime( string msg = "" );
+  void measureTime( int i );
+
+ private:
   clock_t prevTime;
+  clock_t prefixTime;
   string prefix;
 
-  Timer(string prefix = "");
-  void measureTime( string msg = "" );
+  double resetTimer( clock_t &timer );
 };
 
 struct ParentsTree
@@ -18,6 +24,7 @@ struct ParentsTree
   int V;
   int root;
   vector<int> father;
+  vector<int> *sons;
 
   ParentsTree();
   ParentsTree( int V, int root, const vector<int> &father );
@@ -56,7 +63,7 @@ int getEdgeEnd( ParentsTree &tree, int edgeCode );
 
 struct NextEdgeTree
 {
-  int firstEdge;  //virtual edge that goes to root
+  int firstEdge;  // virtual edge that goes to root
   vector<int> next;
 
   NextEdgeTree();

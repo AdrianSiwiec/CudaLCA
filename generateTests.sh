@@ -32,8 +32,8 @@ genText Simple 10 10
 genText Simple 9 9
 genText Simple 8 8
 genText Simple 7 7
-genText Simple 10000 10000
-genText Simple 100000 100000
+# genText Simple 10000 10000
+# genText Simple 100000 100000
 
 genBin Simple 10 10
 genBin Simple 1000 1000
@@ -47,7 +47,7 @@ genBin Simple 8000 8000
 genBin Simple 9000 9000
 genBin Simple 1000000 1000000
 genBin Simple 2000000 2000000
-# genBin Simple 3000000 3000000
+genBin Simple 3000000 3000000
 # genBin Simple 10000000 10000000
 # genBin Simple 10000000 10000000
 

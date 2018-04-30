@@ -4,9 +4,12 @@ NVCCFLAGS=-std=c++11 -arch sm_50 -O2 --expt-extended-lambda -I ../moderngpu/src
 CXX=g++
 CXXFLAGS=-std=c++11 -O2 -fno-stack-protector 
 
-all: cudaInlabelLCA.e cudaSimpleLCA.e cpuSimpleLCA.e generateSimple.e generateLongSimple.e
+all: cudaInlabelLCA.e cudaSimpleLCA.e cpuSimpleLCA.e generateSimple.e generateLongSimple.e cpuRmqLCA.e
 
 cpuSimpleLCA.e: cpuSimpleLCA.o commons.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+cpuRmqLCA.e: cpuRmqLCA.o commons.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 cudaInlabelLCA.e: cudaInlabelLCA.cu commons.o cudaCommons.o

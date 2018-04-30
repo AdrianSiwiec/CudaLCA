@@ -11,7 +11,7 @@ __global__ void cuCalcQueries( int Q, int *father, int *depth, int *queries, int
 
 int main( int argc, char *argv[] )
 {
-  Timer timer = Timer();
+  Timer timer = Timer( "Parse Input" );
 
   standard_context_t context( 0 );
 
@@ -25,7 +25,8 @@ int main( int argc, char *argv[] )
     tc = readFromFile( argv[1] );
   }
 
-  timer.measureTime( "Read Input" );
+  timer.measureTime();
+  timer.setPrefix( "Preprocessing" );
 
   int *devFather;
   int *devDepth;

@@ -13,8 +13,7 @@ int *queries;
 
 int main( int argc, char *argv[] )
 {
-  Timer timer = Timer();
-  timer.measureTime();
+  Timer timer( "Parse Input" );
 
   TestCase tc;
   if ( argc == 1 )
@@ -26,7 +25,7 @@ int main( int argc, char *argv[] )
     tc = readFromFile( argv[1] );
   }
 
-  timer.measureTime( "Read Input" );
+  timer.measureTime( "Read" );
 
   int V = tc.tree.V;
   int root = tc.tree.root;
@@ -43,12 +42,14 @@ int main( int argc, char *argv[] )
     if ( tmp != -1 ) G[tmp].push_back( i );
   }
 
-  timer.measureTime( "Parse Input" );
+  timer.measureTime( "Parse" );
+  timer.setPrefix( "Preprocessing" );
 
   depth[root] = 0;
   dfs( root );
 
-  timer.measureTime( "Preprocessing" );
+  timer.measureTime();
+  timer.setPrefix( "Queries" );
 
   // for ( int i = 0; i < V; i++ )
   // {
@@ -83,7 +84,8 @@ int main( int argc, char *argv[] )
     answers[i] = p;
   }
 
-  timer.measureTime( "Calculate Queries" );
+  timer.measureTime( Q );
+  timer.setPrefix( "Write Output" );
 
   if ( argc < 3 )
   {
@@ -94,7 +96,7 @@ int main( int argc, char *argv[] )
     writeAnswersToFile( Q, answers.data(), argv[2] );
   }
 
-  timer.measureTime( "Output Answers" );
+  timer.measureTime();
 }
 
 void dfs( int i )

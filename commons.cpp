@@ -7,23 +7,53 @@ using namespace std;
 Timer::Timer( string prefix ) : prefix( prefix )
 {
   prevTime = clock();
+  prefixTime = clock();
 }
 
+void Timer::setPrefix( string prefix )
+{
+  double time = resetTimer( prefixTime );
+
+  cerr.precision( 3 );
+  cerr << this->prefix << "," << time << ","
+       << "Whole" << endl;
+
+  this->prefix = prefix;
+}
 void Timer::measureTime( string msg )
 {
-  clock_t now = clock();
-  if ( msg.size() > 0 )
-  {
-    cerr.precision( 3 );
-    if ( prefix != "" ) cerr << prefix << " ";
-    cerr << "\"" << msg << "\" took " << double( now - prevTime ) / CLOCKS_PER_SEC << "s" << endl;
-  }
+  double time = resetTimer( prevTime );
 
-  prevTime = now;
+  cerr.precision( 3 );
+  cerr << prefix << "," << time << "," << msg << endl;
+}
+void Timer::measureTime( int i )
+{
+  measureTime( to_string( i ) );
+}
+double Timer::resetTimer( clock_t &timer )
+{
+  clock_t now = clock();
+  double res = double( now - timer ) / CLOCKS_PER_SEC;
+
+  timer = now;
+
+  return res;
 }
 
-ParentsTree::ParentsTree() : V( 0 ), root( 0 ), father( vector<int>() ) {}
-ParentsTree::ParentsTree( int V, int root, const vector<int> &father ) : V( V ), root( root ), father( father ) {}
+
+ParentsTree::ParentsTree() : V( 0 ), root( 0 ), father( vector<int>() ), sons( 0 ) {}
+ParentsTree::ParentsTree( int V, int root, const vector<int> &father ) : V( V ), root( root ), father( father )
+{
+  sons = new vector<int>[V];
+  for ( int i = 0; i < V; i++ )
+  {
+    if ( father[i] != -1 )
+    {
+      sons[father[i]].push_back( i );
+    }
+  }
+}
 ParentsTree::ParentsTree( ifstream &in )
 {
   in.read( (char *) &V, sizeof( int ) );
@@ -31,12 +61,31 @@ ParentsTree::ParentsTree( ifstream &in )
 
   father.resize( V );
   in.read( (char *) father.data(), sizeof( int ) * V );
+
+  sons = new vector<int>[V];
+
+  for ( int i = 0; i < V; i++ )
+  {
+    int sonsCounter;
+    in.read( (char *) &sonsCounter, sizeof( int ) );
+    if ( sonsCounter > 0 )
+    {
+      sons[i].resize( sonsCounter );
+      in.read( (char *) sons[i].data(), sizeof( int ) * sonsCounter );
+    }
+  }
 }
 void ParentsTree::writeToStream( ofstream &out )
 {
   out.write( (char *) &V, sizeof( int ) );
   out.write( (char *) &root, sizeof( int ) );
   out.write( (char *) father.data(), sizeof( int ) * V );
+  for ( int i = 0; i < V; i++ )
+  {
+    int size = sons[i].size();
+    out.write( (char *) &size, sizeof( int ) );
+    if ( sons[i].size() > 0 ) out.write( (char *) sons[i].data(), sizeof( int ) * sons[i].size() );
+  }
 }
 
 Queries::Queries() : N( 0 ), tab( vector<int>() ) {}
@@ -138,7 +187,17 @@ void writeToStdOut( TestCase &tc )
   {
     cout << tc.tree.father[i] << " ";
   }
-  cout << endl << tc.q.N << endl;
+  cout << endl;
+  for ( int i = 0; i < tc.tree.V; i++ )
+  {
+    cout << tc.tree.sons[i].size() << " ";
+    for ( int j = 0; j < tc.tree.sons[i].size(); j++ )
+    {
+      cout << tc.tree.sons[i][j] << " ";
+    }
+    cout << endl;
+  }
+  cout << tc.q.N << endl;
   for ( int i = 0; i < tc.q.N * 2; i++ )
   {
     cout << tc.q.tab[i] << " ";
@@ -153,20 +212,36 @@ TestCase readFromFile( const char *filename )
 }
 TestCase readFromStdIn()
 {
-  TestCase tc;
-  cin >> tc.tree.V >> tc.tree.root;
-  tc.tree.father.resize( tc.tree.V );
-  for ( int i = 0; i < tc.tree.V; i++ )
+  ParentsTree tree;
+  cin >> tree.V >> tree.root;
+
+  tree.father.resize( tree.V );
+  for ( int i = 0; i < tree.V; i++ )
   {
-    cin >> tc.tree.father[i];
+    cin >> tree.father[i];
   }
-  cin >> tc.q.N;
-  tc.q.tab.resize( tc.q.N * 2 );
-  for ( int i = 0; i < tc.q.N * 2; i++ )
+
+  tree.sons = new vector<int>[tree.V];
+  for ( int i = 0; i < tree.V; i++ )
   {
-    cin >> tc.q.tab[i];
+    int tmpSize;
+    cin >> tmpSize;
+    tree.sons[i].resize( tmpSize );
+    for ( int j = 0; j < tmpSize; j++ )
+    {
+      cin >> tree.sons[i][j];
+    }
   }
-  return tc;
+
+  int N;
+  cin >> N;
+  vector<int> q( N * 2 );
+
+  for ( int i = 0; i < N * 2; i++ )
+  {
+    cin >> q[i];
+  }
+  return TestCase( tree, Queries( N, q ) );
 }
 
 void writeAnswersToStdOut( int Q, int *ans )

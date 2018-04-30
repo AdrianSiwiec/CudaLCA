@@ -47,7 +47,6 @@ void CudaSimpleListRank( int *devRank, int N, int *devNext, int threadsPerBlockX
 void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_context_t &context )
 {
   Timer listTimer( "List Rank" );
-  Timer t;
   int s;
   if ( N > 1000000 )
     s = 1000;
@@ -169,7 +168,7 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   CUCHECK( cudaFree( devLast ) );
 
   listTimer.measureTime( "Free moemory" );
-  t.measureTime( "Whole List Rank" );
+  listTimer.setPrefix("");
 }
 
 __global__ void cuCalcRankRead( int V, int *next, int *rank, int *tmp, int *notAllDone )
