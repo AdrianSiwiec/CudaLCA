@@ -29,7 +29,7 @@ void Timer::measureTime( string msg )
 }
 void Timer::measureTime( int i )
 {
-  measureTime( to_string( i ) );
+  measureTime( "NumOfQueries:" + to_string( i ) );
 }
 double Timer::resetTimer( clock_t &timer )
 {
@@ -42,15 +42,31 @@ double Timer::resetTimer( clock_t &timer )
 }
 
 
-ParentsTree::ParentsTree() : V( 0 ), root( 0 ), father( vector<int>() ), sons( 0 ) {}
+ParentsTree::ParentsTree() : V( 0 ), root( 0 ), father( vector<int>() ), son( vector<int>() ) {}
 ParentsTree::ParentsTree( int V, int root, const vector<int> &father ) : V( V ), root( root ), father( father )
 {
-  sons = new vector<int>[V];
+  son = vector<int>( V, -1 );
+
+  for ( int i = 0; i < V; i++ )
+  {
+    if ( father[i] != -1 && son[father[i]] == -1 )
+    {
+      son[father[i]] = i;
+    }
+  }
+
+  neighbour = vector<int>( V, -1 );
+
+  vector<int> lastSon( V, -1 );
   for ( int i = 0; i < V; i++ )
   {
     if ( father[i] != -1 )
     {
-      sons[father[i]].push_back( i );
+      if ( lastSon[father[i]] != -1 )
+      {
+        neighbour[lastSon[father[i]]] = i;
+      }
+      lastSon[father[i]] = i;
     }
   }
 }
@@ -61,31 +77,18 @@ ParentsTree::ParentsTree( ifstream &in )
 
   father.resize( V );
   in.read( (char *) father.data(), sizeof( int ) * V );
-
-  sons = new vector<int>[V];
-
-  for ( int i = 0; i < V; i++ )
-  {
-    int sonsCounter;
-    in.read( (char *) &sonsCounter, sizeof( int ) );
-    if ( sonsCounter > 0 )
-    {
-      sons[i].resize( sonsCounter );
-      in.read( (char *) sons[i].data(), sizeof( int ) * sonsCounter );
-    }
-  }
+  neighbour.resize( V );
+  in.read( (char *) neighbour.data(), sizeof( int ) * V );
+  son.resize( V );
+  in.read( (char *) son.data(), sizeof( int ) * V );
 }
 void ParentsTree::writeToStream( ofstream &out )
 {
   out.write( (char *) &V, sizeof( int ) );
   out.write( (char *) &root, sizeof( int ) );
   out.write( (char *) father.data(), sizeof( int ) * V );
-  for ( int i = 0; i < V; i++ )
-  {
-    int size = sons[i].size();
-    out.write( (char *) &size, sizeof( int ) );
-    if ( sons[i].size() > 0 ) out.write( (char *) sons[i].data(), sizeof( int ) * sons[i].size() );
-  }
+  out.write( (char *) neighbour.data(), sizeof( int ) * V );
+  out.write( (char *) son.data(), sizeof( int ) * V );
 }
 
 Queries::Queries() : N( 0 ), tab( vector<int>() ) {}
@@ -190,13 +193,15 @@ void writeToStdOut( TestCase &tc )
   cout << endl;
   for ( int i = 0; i < tc.tree.V; i++ )
   {
-    cout << tc.tree.sons[i].size() << " ";
-    for ( int j = 0; j < tc.tree.sons[i].size(); j++ )
-    {
-      cout << tc.tree.sons[i][j] << " ";
-    }
-    cout << endl;
+    cout << tc.tree.neighbour[i] << " ";
   }
+  cout << endl;
+  for ( int i = 0; i < tc.tree.V; i++ )
+  {
+    cout << tc.tree.son[i] << " ";
+  }
+  cout << endl;
+  
   cout << tc.q.N << endl;
   for ( int i = 0; i < tc.q.N * 2; i++ )
   {
@@ -221,17 +226,18 @@ TestCase readFromStdIn()
     cin >> tree.father[i];
   }
 
-  tree.sons = new vector<int>[tree.V];
+  tree.neighbour.resize( tree.V );
   for ( int i = 0; i < tree.V; i++ )
   {
-    int tmpSize;
-    cin >> tmpSize;
-    tree.sons[i].resize( tmpSize );
-    for ( int j = 0; j < tmpSize; j++ )
-    {
-      cin >> tree.sons[i][j];
-    }
+    cin >> tree.neighbour[i];
   }
+
+  tree.son.resize( tree.V );
+  for ( int i = 0; i < tree.V; i++ )
+  {
+    cin >> tree.son[i];
+  }
+
 
   int N;
   cin >> N;

@@ -5,6 +5,7 @@ fromStudent/*
 .vscode/*
 cmake-build-debug/*
 out
+timesResults
 
 #binaries
 *.o

@@ -35,24 +35,24 @@ genText Simple 7 7
 # genText Simple 10000 10000
 # genText Simple 100000 100000
 
-genBin Simple 10 10
-genBin Simple 1000 1000
+# genBin Simple 10 10
+# genBin Simple 1000 1000
 genBin Simple 2000 2000
 genBin Simple 3000 3000
 genBin Simple 4000 4000
 genBin Simple 5000 5000
 genBin Simple 6000 6000
 genBin Simple 7000 7000
-genBin Simple 8000 8000
-genBin Simple 9000 9000
-genBin Simple 1000000 1000000
-genBin Simple 2000000 2000000
-genBin Simple 3000000 3000000
+# genBin Simple 8000 8000
+# genBin Simple 9000 9000
+# genBin Simple 1000000 1000000
+# genBin Simple 2000000 2000000
+# genBin Simple 3000000 3000000
 # genBin Simple 10000000 10000000
-# genBin Simple 10000000 10000000
+# genBin Simple 30000000 30000000
 
 # genBin LongSimple 10000 10000
 # genBin LongSimple 100000 100000
-# genBin LongSimple 1000000 1000000
+genBin LongSimple 1000 1000
 
 echo "OK"

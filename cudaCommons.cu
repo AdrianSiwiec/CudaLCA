@@ -49,7 +49,7 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   Timer listTimer( "List Rank" );
   int s;
   if ( N > 1000000 )
-    s = 1000;
+    s = 50000;
   else
     s = N / 100;
   if ( s == 0 ) s = 1;

@@ -6,7 +6,7 @@ using namespace std;
 
 struct Timer
 {
-  Timer( string prefix);
+  Timer( string prefix );
   void setPrefix( string prefix );
   void measureTime( string msg = "" );
   void measureTime( int i );
@@ -24,7 +24,8 @@ struct ParentsTree
   int V;
   int root;
   vector<int> father;
-  vector<int> *sons;
+  vector<int> neighbour;
+  vector<int> son;
 
   ParentsTree();
   ParentsTree( int V, int root, const vector<int> &father );

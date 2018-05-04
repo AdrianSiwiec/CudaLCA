@@ -16,10 +16,12 @@ __device__ bool isEdgeToFather( int edgeCode );
 
 int main( int argc, char *argv[] )
 {
-  // cudaSetDevice( 1 );
   Timer timer( "Parse Input" );
 
+  cudaSetDevice( 1 );
   standard_context_t context( 0 );
+
+  timer.measureTime( "Init cuda" );
 
   TestCase tc;
   if ( argc == 1 )
@@ -33,24 +35,60 @@ int main( int argc, char *argv[] )
 
   timer.measureTime( "Read" );
 
-  NextEdgeTree path( tc.tree );  // TODO: clear it up, scratch NextEdgeTree
-
   timer.measureTime( "Generate Next Edge Tree" );
   timer.setPrefix( "Preprocessing" );
 
   const int V = tc.tree.V;
   const int root = tc.tree.root;
 
+  int *devSon;
+  int *devNeighbour;
+  int *devFather;
+  CUCHECK( cudaMalloc( (void **) &devSon, sizeof( int ) * V ) );
+  CUCHECK( cudaMalloc( (void **) &devNeighbour, sizeof( int ) * V ) );
+  CUCHECK( cudaMalloc( (void **) &devFather, sizeof( int ) * V ) );
+
+  CUCHECK( cudaMemcpy( devSon, tc.tree.son.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
+  CUCHECK( cudaMemcpy( devNeighbour, tc.tree.neighbour.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
+  CUCHECK( cudaMemcpy( devFather, tc.tree.father.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
+
   int *devNextEdge;
   int *devEdgeRank;
 
   CUCHECK( cudaMalloc( (void **) &devNextEdge, sizeof( int ) * V * 2 ) );
+
+  transform(
+      [=] MGPU_DEVICE( int thid ) {
+        int v = thid / 2;
+        int father = devFather[v];
+        if ( isEdgeToFather( thid ) )
+        {
+          int neighbour = devNeighbour[v];
+          if ( neighbour != -1 )
+            devNextEdge[thid] = CudaGetEdgeCode( neighbour, false );
+          else
+          {
+            if ( father != -1 )
+              devNextEdge[thid] = CudaGetEdgeCode( father, true );
+            else
+              devNextEdge[thid] = -1;
+          }
+        }
+        else
+        {
+          int son = devSon[v];
+          if ( son != -1 )
+            devNextEdge[thid] = CudaGetEdgeCode( son, false );
+          else
+            devNextEdge[thid] = CudaGetEdgeCode( v, true );
+        }
+      },
+      V * 2,
+      context );
+
   CUCHECK( cudaMalloc( (void **) &devEdgeRank, sizeof( int ) * V * 2 ) );
 
   timer.measureTime( "Allocs" );
-
-  CUCHECK( cudaMemcpy( devNextEdge, path.next.data(), sizeof( int ) * V * 2, cudaMemcpyHostToDevice ) );
-
 
   transform( [=] MGPU_DEVICE( int thid ) { devEdgeRank[thid] = 0; }, V * 2, context );
   context.synchronize();
@@ -58,9 +96,10 @@ int main( int argc, char *argv[] )
   timer.measureTime( "Copy Input to Dev and Init data" );
 
   // int threadsPerBlockX = 1024;
-  //int blocksPerGridX = ( V * 2 + threadsPerBlockX - 1 ) / threadsPerBlockX;
+  // int blocksPerGridX = ( V * 2 + threadsPerBlockX - 1 ) / threadsPerBlockX;
   // CudaSimpleListRank( devEdgeRank, V * 2, devNextEdge, threadsPerBlockX, blocksPerGridX );
-  CudaFastListRank( devEdgeRank, V * 2, path.firstEdge, devNextEdge, context );
+
+  CudaFastListRank( devEdgeRank, V * 2, getEdgeCode( root, 0 ), devNextEdge, context );
 
   timer.measureTime( "List Rank" );
 
@@ -98,15 +137,12 @@ int main( int argc, char *argv[] )
   int *devW1Sum;
   int *devW2Sum;
 
-  int *devFather;
 
   CUCHECK( cudaMalloc( (void **) &devW1, sizeof( int ) * E ) );
   CUCHECK( cudaMalloc( (void **) &devW1Sum, sizeof( int ) * E ) );
   CUCHECK( cudaMalloc( (void **) &devW2, sizeof( int ) * E ) );
   CUCHECK( cudaMalloc( (void **) &devW2Sum, sizeof( int ) * E ) );
-  CUCHECK( cudaMalloc( (void **) &devFather, sizeof( int ) * V ) );
 
-  CUCHECK( cudaMemcpy( devFather, tc.tree.father.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
 
   timer.measureTime( "Inlabel allocs" );
 
@@ -323,7 +359,7 @@ int main( int argc, char *argv[] )
     writeAnswersToFile( Q, answers, argv[2] );
   }
 
-  timer.setPrefix("");
+  timer.setPrefix( "" );
 }
 
 __device__ int CudaGetEdgeStart( int *father, int edgeCode )

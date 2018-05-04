@@ -61,7 +61,7 @@ int main( int argc, char *argv[] )
 
   CudaSimpleListRank( devDepth, V, devNext, threadsPerBlockX, blockPerGridX );
 
-  timer.measureTime( "Cuda Preprocessing" );
+  timer.setPrefix( "Queries" );
 
   int Q = tc.q.N;
 
@@ -77,13 +77,14 @@ int main( int argc, char *argv[] )
   cuCalcQueries<<<blockPerGridX, threadsPerBlockX>>>( Q, devFather, devDepth, devQueries, devAnswers );
   CUCHECK( cudaDeviceSynchronize() );
 
-  timer.measureTime( "Cuda calc queries" );
+  timer.measureTime( Q );
 
   int *answers = (int *) malloc( sizeof( int ) * Q );
 
   CUCHECK( cudaMemcpy( answers, devAnswers, sizeof( int ) * Q, cudaMemcpyDeviceToHost ) );
 
   timer.measureTime( "Copy answers to Host" );
+  timer.setPrefix( "Write Output" );
 
   if ( argc < 3 )
   {
@@ -94,7 +95,7 @@ int main( int argc, char *argv[] )
     writeAnswersToFile( Q, answers, argv[2] );
   }
 
-  timer.measureTime( "Write Output" );
+  timer.setPrefix( "" );
 }
 
 __global__ void cuCalcQueries( int Q, int *father, int *depth, int *queries, int *answers )

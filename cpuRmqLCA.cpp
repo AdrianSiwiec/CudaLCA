@@ -22,7 +22,7 @@ ParentsTree *tree;
 
 int main( int argc, char *argv[] )
 {
-  Timer timer("Parse Input");
+  Timer timer( "Parse Input" );
 
   TestCase tc;
   if ( argc == 1 )
@@ -89,7 +89,7 @@ int main( int argc, char *argv[] )
     answers[i] = reversePreorder[rmqMin( p, q, 0, treePower - 1, 0 )];
   }
 
-  timer.measureTime(tc.q.N);
+  timer.measureTime( tc.q.N );
   timer.setPrefix( "Write Output" );
 
   if ( argc < 3 )
@@ -114,9 +114,9 @@ void dfsRmq( int v )
   preCounter++;
   eulerCounter++;
 
-  for ( int i = 0; i < tree->sons[v].size(); i++ )
+  for ( int son = tree->son[v]; son != -1; son = tree->neighbour[son] )
   {
-    dfsRmq( tree->sons[v][i] );
+    dfsRmq( son );
     dfsEulerPath[eulerCounter] = preorder[v];
     eulerCounter++;
   }
