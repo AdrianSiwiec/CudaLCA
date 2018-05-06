@@ -4,14 +4,14 @@ toTest="cpuRmqLCA"
 
 echo "Generating Tests"
 ./generateTests.sh
-echo "Generating Answers"
-./generateAnswers.sh 
+# echo "Generating Answers"
+# ./generateAnswers.sh 
 
 make $toTest.e
 
 mkdir timesResults
 
-repeatTimes=3
+repeatTimes=5
 
 progressBarWidth=30
 

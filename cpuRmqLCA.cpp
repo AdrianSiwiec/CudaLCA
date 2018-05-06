@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stack>
 #include <vector>
 #include "commons.h"
 
@@ -62,6 +63,7 @@ int main( int argc, char *argv[] )
 
   dfsRmq( root );
 
+
   //   for ( int i = 0; i < V; i++ )
   //   {
   //     cout << preorder[i] << " ";
@@ -103,22 +105,42 @@ int main( int argc, char *argv[] )
 
   timer.measureTime();
 }
-void dfsRmq( int v )
+void dfsRmq( int starting )
 {
-  preorder[v] = preCounter;
-  reversePreorder[preCounter] = v;
+  stack<int> s1;
+  s1.push( starting );
 
-  dfsEulerPath[eulerCounter] = preCounter;
-  rmqPos[preCounter] = eulerCounter;
+  stack<int> s2;
 
-  preCounter++;
-  eulerCounter++;
-
-  for ( int son = tree->son[v]; son != -1; son = tree->neighbour[son] )
+  while ( !s1.empty() )
   {
-    dfsRmq( son );
-    dfsEulerPath[eulerCounter] = preorder[v];
-    eulerCounter++;
+    int v = s1.top();
+
+    if ( !s2.empty() )
+    {
+      dfsEulerPath[eulerCounter] = preorder[s2.top()];
+      rmqPos[preorder[s2.top()]] = eulerCounter;
+      eulerCounter++;
+    }
+
+    if ( !s2.empty() && v == s2.top() )
+    {
+      s1.pop();
+      s2.pop();
+      continue;
+    }
+
+    for ( int son = tree->son[v]; son != -1; son = tree->neighbour[son] )
+    {
+      s1.push( son );
+    }
+
+    s2.push( v );
+
+    preorder[v] = preCounter;
+    reversePreorder[preCounter] = v;
+
+    preCounter++;
   }
 }
 void initIntervalTree( int n, int power )

@@ -1,6 +1,6 @@
 # toTest="cudaSimpleLCA"
-toTest="cudaInlabelLCA"
-# toTest="cpuRmqLCA"
+# toTest="cudaInlabelLCA"
+toTest="cpuRmqLCA"
 
 echo "Generating Tests"
 ./generateTests.sh 

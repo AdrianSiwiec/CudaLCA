@@ -28,31 +28,40 @@ make generateLongSimple.e
 #   genBin Simple 100 $i
 # done
 
-genText Simple 10 10
-genText Simple 9 9
-genText Simple 8 8
-genText Simple 7 7
+# genText Simple 10 10
+# genText Simple 9 9
+# genText Simple 8 8
+# genText Simple 7 7
 # genText Simple 10000 10000
 # genText Simple 100000 100000
 
 # genBin Simple 10 10
 # genBin Simple 1000 1000
-genBin Simple 2000 2000
-genBin Simple 3000 3000
-genBin Simple 4000 4000
-genBin Simple 5000 5000
-genBin Simple 6000 6000
-genBin Simple 7000 7000
+# genBin Simple 2000 2000
+# genBin Simple 3000 3000
+# genBin Simple 4000 4000
+# genBin Simple 5000 5000
+# genBin Simple 6000 6000
+# genBin Simple 7000 7000
 # genBin Simple 8000 8000
 # genBin Simple 9000 9000
-# genBin Simple 1000000 1000000
-# genBin Simple 2000000 2000000
-# genBin Simple 3000000 3000000
-# genBin Simple 10000000 10000000
-# genBin Simple 30000000 30000000
+# genBin Simple 1000000 100000
+# genBin Simple 5000000 500000
+# genBin Simple 10000000 1000000
+# genBin Simple 15000000 1500000
+# genBin Simple 20000000 2000000
+# genBin Simple 25000000 2500000
+# genBin Simple 30000000 3000000
+# genBin Simple 35000000 35000000
+# genBin Simple 40000000 40000000
+# genBin Simple 50000000 50000000
 
-# genBin LongSimple 10000 10000
-# genBin LongSimple 100000 100000
-genBin LongSimple 1000 1000
+genBin LongSimple 30000000 30000
+genBin LongSimple 25000000 30000
+genBin LongSimple 20000000 30000
+genBin LongSimple 15000000 30000
+genBin LongSimple 10000000 30000
+genBin LongSimple 5000000 30000
+genBin LongSimple 1000000 30000
 
 echo "OK"
