@@ -1,7 +1,12 @@
 #!/usr/bin/python3
 import os
+import sys
 
-resultsDirectory="./timesResults/"
+resultsDirectory=""
+if len(sys.argv) <= 1:
+    resultsDirectory="./timesResults/"
+else:
+    resultsDirectory=sys.argv[1]
 
 class result:
     def __init__(self, solutionName, testName, timestamp, combined, singleResults):
@@ -93,7 +98,8 @@ for(dirpath, dirnames, filenames) in os.walk(resultsDirectory):
 
 results = []
 for filename in resultsRaw:
-    results.append(getResultFromFilename(filename))
+    if filename[0] != '.':
+        results.append(getResultFromFilename(filename))
 
 testNames = []
 for res in results:

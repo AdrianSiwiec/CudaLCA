@@ -1,4 +1,5 @@
 #include <cuda_runtime.h>
+#include <curand_kernel.h>
 #include <iostream>
 #include <moderngpu/transform.hxx>
 #include "commons.h"
@@ -11,6 +12,7 @@ __global__ void cuCalcRankRead( int V, int *next, int *depth, int *tmp, int *not
 __global__ void cuCalcRankWrite( int V, int *next, int *depth, int *tmp );
 __global__ void cuMoveNextRead( int V, int *next, int *tmp );
 __global__ void cuMoveNextWrite( int V, int *next, int *tmp, int *notAllDone );
+__device__ int cuAbs( int i );
 
 void CudaSimpleListRank( int *devRank, int N, int *devNext, int threadsPerBlockX, int blocksPerGridX )
 {
@@ -55,10 +57,17 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   if ( s == 0 ) s = 1;
 
 
-  int *next = new int[N];
-  int *sum = new int[s + 1];
-  int *last = new int[s + 1];
-  int *sublistHead = new int[s + 1];
+  int *sum;
+  int *last;
+  int *next;
+  sum = new int[s + 1];
+  last = new int[s + 1];
+  next = new int[N];
+  // cudaMallocHost( &sum, sizeof( int ) * ( s + 1 ) );
+  // cudaMallocHost( &last, sizeof( int ) * ( s + 1 ) );
+  // cudaMallocHost( &next, sizeof( int ) * N );
+
+  listTimer.measureTime( "Host Allocs" );
 
   int *devSum;
   CUCHECK( cudaMalloc( (void **) &devSum, sizeof( int ) * ( s + 1 ) ) );
@@ -69,30 +78,34 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   int *devLast;
   CUCHECK( cudaMalloc( (void **) &devLast, sizeof( int ) * ( s + 1 ) ) );
 
+  listTimer.measureTime( "Device Allocs" );
 
-  CUCHECK( cudaMemcpy( next, devNext, sizeof( int ) * N, cudaMemcpyDeviceToHost ) );
+  transform(
+      [=] MGPU_DEVICE( int i ) {
+        curandState state;
+        curand_init( 123, i, 0, &state );
 
-  for ( int i = 0; i < s; i++ )
-  {
-    int p = i * ( N / s );
-    int q = min( p + N / s, N );
+        int p = i * ( N / s );
+        int q = min( p + N / s, N );
 
-    int splitter;
-    do
-    {
-      splitter = ( rand() % ( q - p ) ) + p;
-    } while ( next[splitter] == -1 );
+        int splitter;
+        do
+        {
+          splitter = ( cuAbs( curand( &state ) ) % ( q - p ) ) + p;
+        } while ( devNext[splitter] == -1 );
 
-    sublistHead[i + 1] = next[splitter];
-    next[splitter] = -i - 2;  // To avoid confusion with -1
-  }
-  sublistHead[0] = head;
+        devSublistHead[i + 1] = devNext[splitter];
+        devNext[splitter] = -i - 2;  // To avoid confusion with -1
 
-  CUCHECK( cudaMemcpy( devNext, next, sizeof( int ) * N, cudaMemcpyHostToDevice ) );
+        if ( i == 0 )
+        {
+          devSublistHead[0] = head;
+        }
+      },
+      s,
+      context );
 
-  CUCHECK( cudaMemcpy( devSublistHead, sublistHead, sizeof( int ) * ( s + 1 ), cudaMemcpyHostToDevice ) );
-
-  listTimer.measureTime( "Init and CPU generating splitters" );
+  listTimer.measureTime( "CPU generating splitters" );
 
   transform(
       [=] MGPU_DEVICE( int thid ) {
@@ -119,14 +132,15 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
       },
       s + 1,
       context );
+  context.synchronize();
 
   listTimer.measureTime( "GPU sublist rank calculation" );
 
-
   CUCHECK( cudaMemcpy( sum, devSum, sizeof( int ) * ( s + 1 ), cudaMemcpyDeviceToHost ) );
   CUCHECK( cudaMemcpy( next, devNext, sizeof( int ) * N, cudaMemcpyDeviceToHost ) );
-
   CUCHECK( cudaMemcpy( last, devLast, sizeof( int ) * ( s + 1 ), cudaMemcpyDeviceToHost ) );
+
+  listTimer.measureTime( "Copy sublists to Host" );
 
 
   int tmpSum = 0;
@@ -144,7 +158,7 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
 
   CUCHECK( cudaMemcpy( devSum, sum, sizeof( int ) * ( s + 1 ), cudaMemcpyHostToDevice ) );
 
-  listTimer.measureTime( "CPU adding sums and copying memory" );
+  listTimer.measureTime( "CPU adding sums" );
 
   transform(
       [=] MGPU_DEVICE( int thid ) {
@@ -160,7 +174,9 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   delete[] next;
   delete[] sum;
   delete[] last;
-  delete[] sublistHead;
+  // cudaFreeHost( next );
+  // cudaFreeHost( sum );
+  // cudaFreeHost( last );
 
   CUCHECK( cudaFree( devSum ) );
   CUCHECK( cudaFree( devSublistHead ) );
@@ -168,7 +184,7 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   CUCHECK( cudaFree( devLast ) );
 
   listTimer.measureTime( "Free moemory" );
-  listTimer.setPrefix("");
+  listTimer.setPrefix( "" );
 }
 
 __global__ void cuCalcRankRead( int V, int *next, int *rank, int *tmp, int *notAllDone )
@@ -231,4 +247,8 @@ void CudaPrintTab( int *tab, int size )
   cerr << endl;
 
   free( tmp );
+}
+__device__ int cuAbs( int i )
+{
+  return i < 0 ? -i : i;
 }

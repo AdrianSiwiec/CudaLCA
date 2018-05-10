@@ -34,8 +34,6 @@ int main( int argc, char *argv[] )
   }
 
   timer.measureTime( "Read" );
-
-  timer.measureTime( "Generate Next Edge Tree" );
   timer.setPrefix( "Preprocessing" );
 
   const int V = tc.tree.V;
@@ -44,18 +42,19 @@ int main( int argc, char *argv[] )
   int *devSon;
   int *devNeighbour;
   int *devFather;
+  int *devNextEdge;
   CUCHECK( cudaMalloc( (void **) &devSon, sizeof( int ) * V ) );
   CUCHECK( cudaMalloc( (void **) &devNeighbour, sizeof( int ) * V ) );
   CUCHECK( cudaMalloc( (void **) &devFather, sizeof( int ) * V ) );
+  CUCHECK( cudaMalloc( (void **) &devNextEdge, sizeof( int ) * V * 2 ) );
+
+  timer.measureTime( "Device Allocs" );
 
   CUCHECK( cudaMemcpy( devSon, tc.tree.son.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
   CUCHECK( cudaMemcpy( devNeighbour, tc.tree.neighbour.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
   CUCHECK( cudaMemcpy( devFather, tc.tree.father.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
 
-  int *devNextEdge;
-  int *devEdgeRank;
-
-  CUCHECK( cudaMalloc( (void **) &devNextEdge, sizeof( int ) * V * 2 ) );
+  timer.measureTime( "Device Memcpy" );
 
   transform(
       [=] MGPU_DEVICE( int thid ) {
@@ -85,15 +84,18 @@ int main( int argc, char *argv[] )
       },
       V * 2,
       context );
+  context.synchronize();
 
+  CUCHECK( cudaFree( devSon ) );
+  CUCHECK( cudaFree( devNeighbour ) );
+
+  int *devEdgeRank;
   CUCHECK( cudaMalloc( (void **) &devEdgeRank, sizeof( int ) * V * 2 ) );
-
-  timer.measureTime( "Allocs" );
 
   transform( [=] MGPU_DEVICE( int thid ) { devEdgeRank[thid] = 0; }, V * 2, context );
   context.synchronize();
 
-  timer.measureTime( "Copy Input to Dev and Init data" );
+  timer.measureTime( "Init devNextEdge and devEdgeRank" );
 
   // int threadsPerBlockX = 1024;
   // int blocksPerGridX = ( V * 2 + threadsPerBlockX - 1 ) / threadsPerBlockX;
@@ -101,15 +103,11 @@ int main( int argc, char *argv[] )
 
   CudaFastListRank( devEdgeRank, V * 2, getEdgeCode( root, 0 ), devNextEdge, context );
 
+  CUCHECK( cudaFree( devNextEdge ) );
+
   timer.measureTime( "List Rank" );
 
-  int *edgeRank = new int[V * 2];
-  CUCHECK( cudaMemcpy( edgeRank, devEdgeRank, sizeof( int ) * V * 2, cudaMemcpyDeviceToHost ) );
-
-  timer.measureTime( "Copy Ranks to Host" );
-
   int *devSortedEdges;
-
   int E = V * 2 - 2;
 
   CUCHECK( cudaMalloc( (void **) &devSortedEdges, sizeof( int ) * E ) );
@@ -127,10 +125,6 @@ int main( int argc, char *argv[] )
       },
       V * 2,
       context );
-  context.synchronize();
-
-  int *sortedEdges = (int *) malloc( sizeof( int ) * E );
-  CUCHECK( cudaMemcpy( sortedEdges, devSortedEdges, sizeof( int ) * E, cudaMemcpyDeviceToHost ) );
 
   int *devW1;
   int *devW2;
@@ -166,6 +160,8 @@ int main( int argc, char *argv[] )
   scan<scan_type_inc>( devW1, E, devW1Sum, context );
   scan<scan_type_inc>( devW2, E, devW2Sum, context );
 
+  context.synchronize();
+
   timer.measureTime( "W1 W2 scans" );
 
   int *devPreorder;
@@ -187,9 +183,11 @@ int main( int argc, char *argv[] )
           devLevel[thid] = 0;
           return;
         }
-        devPreorder[thid] = devW1Sum[devEdgeRank[codeFromFather]] + 1;
+
+        int edgeRankFromFather = devEdgeRank[codeFromFather];
+        devPreorder[thid] = devW1Sum[edgeRankFromFather] + 1;
         devPrePlusSize[thid] = devW1Sum[devEdgeRank[codeToFather]] + 1;
-        devLevel[thid] = devW2Sum[devEdgeRank[codeFromFather]];
+        devLevel[thid] = devW2Sum[edgeRankFromFather];
       },
       V,
       context );
@@ -250,6 +248,8 @@ int main( int argc, char *argv[] )
       V,
       context );
 
+  context.synchronize();
+
   timer.measureTime( "Ascendant scan and calculation" );
 
   int *devHead;
@@ -286,19 +286,22 @@ int main( int argc, char *argv[] )
         int x = devQueries[thid * 2];
         int y = devQueries[thid * 2 + 1];
 
-        if ( devInlabel[x] == devInlabel[y] )
+        int inlabelX = devInlabel[x];
+        int inlabelY = devInlabel[y];
+
+        if ( inlabelX == inlabelY )
         {
           devAnswers[thid] = devLevel[x] < devLevel[y] ? x : y;
           return;
         }
-        int i = 31 - __clz( devInlabel[x] ^ devInlabel[y] );
+        int i = 31 - __clz( inlabelX ^ inlabelY );
 
         int common = devAscendant[x] & devAscendant[y];
         common = ( ( common >> i ) << i );
 
         int j = __ffs( common ) - 1;
 
-        int inlabelZ = ( devInlabel[y] >> ( j ) ) << ( j );
+        int inlabelZ = ( inlabelY >> ( j ) ) << ( j );
         inlabelZ |= ( 1 << j );
 
         int suspects[2];
@@ -319,7 +322,7 @@ int main( int argc, char *argv[] )
           {
             int k = 31 - __clz( devAscendant[tmpX] & ( ( 1 << j ) - 1 ) );
 
-            int inlabelW = ( devInlabel[tmpX] >> ( k ) ) << ( k );
+            int inlabelW = ( devInlabel[tmpX] >> k ) << ( k );
             inlabelW |= ( 1 << k );
 
             int w = devHead[inlabelW];

@@ -1,6 +1,6 @@
-#toTest="cudaInlabelLCA"
+toTest="cudaInlabelLCA"
 #toTest="cudaSimpleLCA"
-toTest="cpuRmqLCA"
+# toTest="cpuRmqLCA"
 
 echo "Generating Tests"
 ./generateTests.sh
@@ -11,7 +11,7 @@ make $toTest.e
 
 mkdir timesResults
 
-repeatTimes=5
+repeatTimes=20
 
 progressBarWidth=30
 
