@@ -25,7 +25,6 @@ int main( int argc, char *argv[] )
     tc = readFromFile( argv[1] );
   }
 
-  timer.measureTime();
   timer.setPrefix( "Preprocessing" );
 
   int *devFather;
@@ -59,7 +58,7 @@ int main( int argc, char *argv[] )
 
   timer.measureTime( "Copy Input and Init data" );
 
-  CudaSimpleListRank( devDepth, V, devNext, threadsPerBlockX, blockPerGridX );
+  CudaSimpleListRank( devDepth, V, devNext, threadsPerBlockX, blockPerGridX, context );
 
   timer.setPrefix( "Queries" );
 

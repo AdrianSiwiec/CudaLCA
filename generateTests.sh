@@ -47,7 +47,7 @@ make generateLongSimple.e
 # genBin Simple 9000 9000
 # genBin Simple 1000000 100000
 # genBin Simple 5000000 500000
-# genBin Simple 10000000 1000000
+genBin Simple 10000000 1000000
 # genBin Simple 15000000 1500000
 # genBin Simple 20000000 2000000
 # genBin Simple 25000000 2500000
@@ -56,12 +56,12 @@ make generateLongSimple.e
 # genBin Simple 40000000 40000000
 # genBin Simple 50000000 50000000
 
-genBin LongSimple 30000000 30000
-genBin LongSimple 25000000 30000
-genBin LongSimple 20000000 30000
-genBin LongSimple 15000000 30000
-genBin LongSimple 10000000 30000
-genBin LongSimple 5000000 30000
-genBin LongSimple 1000000 30000
+# genBin LongSimple 30000000 30000
+# genBin LongSimple 25000000 30000
+# genBin LongSimple 20000000 30000
+# genBin LongSimple 15000000 30000
+# genBin LongSimple 10000000 30000
+# genBin LongSimple 5000000 30000
+# genBin LongSimple 1000000 30000
 
 echo "OK"

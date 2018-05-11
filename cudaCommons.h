@@ -4,10 +4,11 @@
 using namespace mgpu;
 
 // Head equals to sum of all-1, root equals to -1. Supports multiple heads, trees (calculates depth)
-void CudaSimpleListRank( int* devRank, int N, int* devNext, int threadsPerBlockX, int blocksPerGridX );
+void CudaSimpleListRank(
+    int* devRank, int N, int* devNext, int threadsPerBlockX, int blocksPerGridX, standard_context_t& context );
 
 // Head equals to 0, root to sum of all
-void CudaFastListRank( int* devRank, int N, int head, int* devNext, standard_context_t &context );
+void CudaFastListRank( int* devRank, int N, int head, int* devNext, standard_context_t& context );
 
 void CudaAssert( cudaError_t error, const char* code, const char* file, int line );
 

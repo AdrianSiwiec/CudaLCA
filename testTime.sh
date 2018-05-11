@@ -1,5 +1,5 @@
-toTest="cudaInlabelLCA"
-#toTest="cudaSimpleLCA"
+# toTest="cudaInlabelLCA"
+toTest="cudaSimpleLCA"
 # toTest="cpuRmqLCA"
 
 echo "Generating Tests"

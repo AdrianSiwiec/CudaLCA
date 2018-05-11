@@ -8,15 +8,13 @@
 using namespace std;
 using namespace mgpu;
 
-__global__ void cuCalcRankRead( int V, int *next, int *depth, int *tmp, int *notAllDone );
-__global__ void cuCalcRankWrite( int V, int *next, int *depth, int *tmp );
-__global__ void cuMoveNextRead( int V, int *next, int *tmp );
-__global__ void cuMoveNextWrite( int V, int *next, int *tmp, int *notAllDone );
 __device__ int cuAbs( int i );
 
-void CudaSimpleListRank( int *devRank, int N, int *devNext, int threadsPerBlockX, int blocksPerGridX )
+void CudaSimpleListRank(
+    int *devRank, int N, int *devNext, int threadsPerBlockX, int blocksPerGridX, standard_context_t &context )
 {
-  int *notAllDone = (int *) malloc( sizeof( int ) );
+  int *notAllDone;
+  cudaMallocHost( &notAllDone, sizeof( int ) );
 
   int *devTmp;
   int *devNotAllDone;
@@ -26,22 +24,53 @@ void CudaSimpleListRank( int *devRank, int N, int *devNext, int threadsPerBlockX
 
   do
   {
-    cuCalcRankRead<<<blocksPerGridX, threadsPerBlockX>>>( N, devNext, devRank, devTmp, devNotAllDone );
-    CUCHECK( cudaDeviceSynchronize() );
+    transform(
+        [=] MGPU_DEVICE( int thid ) {
+          if ( thid == 0 ) *devNotAllDone = 0;
 
-    cuCalcRankWrite<<<blocksPerGridX, threadsPerBlockX>>>( N, devNext, devRank, devTmp );
-    CUCHECK( cudaDeviceSynchronize() );
+          int nxt = devNext[thid];
+          if ( nxt == -1 ) return;
+          devTmp[thid] = devRank[nxt] + 1;
+        },
+        N,
+        context );
+    context.synchronize();
 
-    cuMoveNextRead<<<blocksPerGridX, threadsPerBlockX>>>( N, devNext, devTmp );
-    CUCHECK( cudaDeviceSynchronize() );
+    transform(
+        [=] MGPU_DEVICE( int thid ) {
+          if ( devNext[thid] == -1 ) return;
+          devRank[thid] += devTmp[thid];
+        },
+        N,
+        context );
+    context.synchronize();
 
-    cuMoveNextWrite<<<blocksPerGridX, threadsPerBlockX>>>( N, devNext, devTmp, devNotAllDone );
-    CUCHECK( cudaDeviceSynchronize() );
+    transform(
+        [=] MGPU_DEVICE( int thid ) {
+          if ( devNext[thid] == -1 ) return;
+          devTmp[thid] = devNext[devNext[thid]];
+        },
+        N,
+        context );
+    context.synchronize();
+
+
+    transform(
+        [=] MGPU_DEVICE( int thid ) {
+          if ( devNext[thid] == -1 ) return;
+
+          devNext[thid] = devTmp[thid];
+
+          *devNotAllDone = 1;
+        },
+        N,
+        context );
+    context.synchronize();
 
     CUCHECK( cudaMemcpy( notAllDone, devNotAllDone, sizeof( int ), cudaMemcpyDeviceToHost ) );
   } while ( *notAllDone );
 
-  free( notAllDone );
+  cudaFree( notAllDone );
   CUCHECK( cudaFree( devTmp ) );
   CUCHECK( cudaFree( devNotAllDone ) );
 }
@@ -185,45 +214,6 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
 
   listTimer.measureTime( "Free moemory" );
   listTimer.setPrefix( "" );
-}
-
-__global__ void cuCalcRankRead( int V, int *next, int *rank, int *tmp, int *notAllDone )
-{
-  int thid = ( blockIdx.x * blockDim.x ) + threadIdx.x;
-  if ( thid == 0 ) *notAllDone = 0;
-
-  if ( thid >= V || next[thid] == -1 ) return;
-
-  tmp[thid] = rank[next[thid]] + 1;
-}
-
-__global__ void cuCalcRankWrite( int V, int *next, int *rank, int *tmp )
-{
-  int thid = ( blockIdx.x * blockDim.x ) + threadIdx.x;
-
-  if ( thid >= V || next[thid] == -1 ) return;
-
-  rank[thid] += tmp[thid];
-}
-
-__global__ void cuMoveNextRead( int V, int *next, int *tmp )
-{
-  int thid = ( blockIdx.x * blockDim.x ) + threadIdx.x;
-
-  if ( thid >= V || next[thid] == -1 ) return;
-
-  tmp[thid] = next[next[thid]];
-}
-
-__global__ void cuMoveNextWrite( int V, int *next, int *tmp, int *notAllDone )
-{
-  int thid = ( blockIdx.x * blockDim.x ) + threadIdx.x;
-
-  if ( thid >= V || next[thid] == -1 ) return;
-
-  next[thid] = tmp[thid];
-
-  *notAllDone = 1;
 }
 
 void CudaAssert( cudaError_t error, const char *code, const char *file, int line )
