@@ -1,5 +1,5 @@
 NVCC=/usr/local/cuda/bin/nvcc
-NVCCFLAGS=-std=c++11 -arch sm_50 -O2 --expt-extended-lambda -I ../moderngpu/src
+NVCCFLAGS=-std=c++11 -arch sm_50 -O2 --expt-extended-lambda -I ./3rdparty/moderngpu/src
 
 CXX=g++
 CXXFLAGS=-std=c++11 -O2 -fno-stack-protector 
