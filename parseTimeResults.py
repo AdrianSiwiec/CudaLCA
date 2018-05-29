@@ -2,15 +2,17 @@
 import os
 import sys
 
-resultsDirectory=""
+resultsDirectory = ""
 if len(sys.argv) <= 1:
-    resultsDirectory="./timesResults/"
+    resultsDirectory = "./timesResults/"
 else:
-    resultsDirectory=sys.argv[1]
+    resultsDirectory = sys.argv[1]
+
 
 class result:
     def __init__(self, solutionName, testName, timestamp, combined, singleResults):
-        self.solutionName = solutionName
+        # self.solutionName = solutionName
+        self.solutionName = solutionName+" ("+timestamp+")"
         self.testName = testName
         self.timestamp = timestamp
         self.combined = combined
@@ -19,19 +21,20 @@ class result:
         numOfQueries = 0
         combinedQueryTimes = 0.0
         for s in singleResults:
-            numOfQueries+=s.numOfQueries
-            combinedQueryTimes+=s.combinedQueryTimes
-        
+            numOfQueries += s.numOfQueries
+            combinedQueryTimes += s.combinedQueryTimes
+
         if(numOfQueries > 0):
             self.oneQueryTime = combinedQueryTimes/numOfQueries
+            self.combined.append(("AvgQueryTime(ns)", self.oneQueryTime*10**9))
         else:
             self.oneQueryTime = 0
-
 
     # def __repr__(self):
     #     return "Solution: "+self.solutionName+", on: "+self.testName+". Timestamp: "+self.timestamp+"\n"+str(self.combined)
 
-class singleResult: #whole
+
+class singleResult:  # whole
     def __init__(self, rawSingleResult):
         self.sectionNames = []
         self.sectionTimes = []
@@ -46,11 +49,10 @@ class singleResult: #whole
                 self.sectionNames.append(sectionName)
                 self.sectionTimes.append(float(time))
                 if "Queries" in line:
-                    self.combinedQueryTimes+=float(time)
+                    self.combinedQueryTimes += float(time)
             if "NumOfQueries" in line:
                 sectionName, time, q = line.split(",")
-                self.numOfQueries+= int(q.split(":")[1])
-
+                self.numOfQueries += int(q.split(":")[1])
 
 
 def getResultFromFilename(filename):
@@ -66,7 +68,6 @@ def getResultFromFilename(filename):
         if len(res) > 1:
             singleResults.append(singleResult(res))
 
-    
     results = []
 
     names = singleResults[0].sectionNames
@@ -77,19 +78,17 @@ def getResultFromFilename(filename):
             if len(times) <= i:
                 times.append([])
             times[i].append(res.sectionTimes[i])
-    
+
     for i in range(len(names)):
         time = 0.0
         for t in times[i]:
-            time+=t
+            time += t
 
-        time/=len(times[i])
+        time /= len(times[i])
         results.append((names[i], time))
 
-    
-
-
     return result(solutionName, testName, timestamp, results, singleResults)
+
 
 resultsRaw = []
 for(dirpath, dirnames, filenames) in os.walk(resultsDirectory):
@@ -114,7 +113,7 @@ for res in results:
 
 for testName in testNames:
     print("Results on "+testName)
-    
+
     for solution in solutions:
         print(" "+solution+":")
 
@@ -123,11 +122,37 @@ for testName in testNames:
                 print("   (timestamp: "+res.timestamp)
                 for c in res.combined:
                     print('   {:<18}{:>18}ms'.format(c[0], str(round(c[1],4))))
-                
+
                 print('   {:<18}{:>18}ns'.format("AverageQueryTime", round(res.oneQueryTime*10**9, 4)))
                 print()
     print()
 
+testPrefixes = ["Simple", "LongSimple", "kron_g500", "road"]
+sectionNames = ["Preprocessing", "AvgQueryTime(ns)"]
+
+for testPrefix in testPrefixes:
+    print(testPrefix)
+    for sectionName in sectionNames:
+        print(sectionName+",", end="")
+        for testName in testNames:
+            if testName.startswith(testPrefix):
+                print(testName + ",", end="")
+
+        print()
+
+        for solution in solutions:
+            print(solution+",", end="")
+            for res in results:
+                for testName in testNames:
+                    if  testName.startswith(testPrefix) and res.solutionName == solution and res.testName == testName:
+                        for sectionRes in res.combined:
+                            if(sectionRes[0] == sectionName):
+                                print(str(round(sectionRes[1], 4))+",", end="")
+            print()
+
+        print()
+
+    print()
 
 
 # print(results)

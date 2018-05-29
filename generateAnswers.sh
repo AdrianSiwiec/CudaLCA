@@ -1,21 +1,24 @@
-# solutionForAnswers=cpuRmqLCA.e
-solutionForAnswers=cpuSimpleLCA.e
+solutionForAnswers=cpuRmqLCA.e
+# solutionForAnswers=cpuSimpleLCA.e
 
 make $solutionForAnswers
 
-for i in $(ls tests); do
-    name=tests/${i::-3}.out
+testsDir=$(realpath ~/storage/tests)
+
+for i in $(ls $testsDir); do
+    i=$(basename $i)
+    name=$testsDir/${i::-3}.out
     if [[ $i == *.t.in ]]; then
         if [ ! -f $name ]; then
             echo "Generating $name"
-            ./$solutionForAnswers <tests/$i >$name
+            ./$solutionForAnswers <$testsDir/$i >$name
         fi
     fi
 
     if [[ $i == *.b.in ]]; then
         if [ ! -f $name ]; then
             echo "Generating $name"
-            ./$solutionForAnswers tests/$i $name
+            ./$solutionForAnswers $testsDir/$i $name
         fi
     fi
     echo "$name generated."

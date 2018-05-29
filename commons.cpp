@@ -131,52 +131,6 @@ int getEdgeEnd( ParentsTree &tree, int edgeCode )
   return getEdgeStart( tree, edgeCode ^ 1 );
 }
 
-NextEdgeTree::NextEdgeTree() : firstEdge( 0 ), next( vector<int>() ) {}
-NextEdgeTree::NextEdgeTree( int firstEdge, const vector<int> &next ) : firstEdge( firstEdge ), next( next ) {}
-NextEdgeTree::NextEdgeTree( ParentsTree &tree )
-{
-  next.resize( tree.V * 2, -1 );
-
-  vector<int> lastEdges( tree.V, -1 );
-  vector<int> firstEdges( tree.V, -1 );
-
-  for ( int i = 0; i < tree.V; i++ )
-  {
-    int father = tree.father[i];
-    if ( father == -1 ) continue;
-
-    if ( lastEdges[father] == -1 )
-    {
-      firstEdges[father] = getEdgeCode( i, 0 );
-    }
-    else
-    {
-      next[lastEdges[father]] = getEdgeCode( i, 0 );
-    }
-
-    lastEdges[father] = getEdgeCode( i, 1 );
-  }
-
-
-  for ( int i = 0; i < tree.V; i++ )
-  {
-    int father = tree.father[i];
-    if ( father == -1 )
-    {
-      firstEdge = getEdgeCode( i, 0 );
-    }
-    if ( firstEdges[i] == -1 )
-    {
-      next[getEdgeCode( i, 0 )] = getEdgeCode( i, 1 );
-    }
-    else
-    {
-      next[getEdgeCode( i, 0 )] = firstEdges[i];
-      next[lastEdges[i]] = getEdgeCode( i, 1 );
-    }
-  }
-}
-
 void writeToFile( TestCase &tc, const char *filename )
 {
   ofstream out( filename, ios::binary );
@@ -201,7 +155,7 @@ void writeToStdOut( TestCase &tc )
     cout << tc.tree.son[i] << " ";
   }
   cout << endl;
-  
+
   cout << tc.q.N << endl;
   for ( int i = 0; i < tc.q.N * 2; i++ )
   {
@@ -289,4 +243,18 @@ void shuffleFathers( vector<int> &in, vector<int> &out, int &root )
     }
     out.push_back( in[shuffle[i]] == -1 ? -1 : newPos[in[shuffle[i]]] );
   }
+}
+
+int find( int i, vector<int> &boss )
+{
+  if ( boss[i] != i )
+  {
+    boss[i] = find( boss[i], boss );
+  }
+  return boss[i];
+}
+void junion( int a, int b, vector<int> &boss, vector<int> &father )
+{
+  father[find( a, boss )] = find( b, boss );
+  boss[find( a, boss )] = find( b, boss );
 }

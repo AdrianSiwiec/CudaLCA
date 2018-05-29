@@ -6,6 +6,7 @@ fromStudent/*
 cmake-build-debug/*
 out
 timesResults
+webTests
 
 #binaries
 *.o

@@ -4,7 +4,7 @@ NVCCFLAGS=-std=c++11 -arch sm_50 -O2 --expt-extended-lambda -I ./3rdparty/modern
 CXX=g++
 CXXFLAGS=-std=c++11 -O2 -fno-stack-protector 
 
-all: cudaInlabelLCA.e cudaSimpleLCA.e cpuSimpleLCA.e generateSimple.e generateLongSimple.e cpuRmqLCA.e
+all: cudaInlabelLCA.e cudaSimpleLCA.e cpuSimpleLCA.e generateSimple.e generateLongSimple.e cpuRmqLCA.e parseDimacs.e testStats.e parseRoad.e
 
 cpuSimpleLCA.e: cpuSimpleLCA.o commons.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
@@ -22,6 +22,15 @@ generateSimple.e: generateSimple.o commons.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 generateLongSimple.e: generateLongSimple.o commons.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+parseDimacs.e: parseDimacs.o commons.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+parseRoad.e: parseRoad.o commons.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+testStats.e: testStats.o commons.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 %.o: %.cu %.h

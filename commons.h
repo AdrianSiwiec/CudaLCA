@@ -62,16 +62,6 @@ int getEdgeCode( int a, bool toFather );  // edge father[a]->a or a->father[a]
 int getEdgeStart( ParentsTree &tree, int edgeCode );
 int getEdgeEnd( ParentsTree &tree, int edgeCode );
 
-struct NextEdgeTree
-{
-  int firstEdge;  // virtual edge that goes to root
-  vector<int> next;
-
-  NextEdgeTree();
-  NextEdgeTree( int firstEdge, const vector<int> &next );
-  NextEdgeTree( ParentsTree &tree );
-};
-
 void writeToFile( TestCase &tc, const char *filename );
 void writeToStdOut( TestCase &tc );
 TestCase readFromFile( const char *filename );
@@ -81,3 +71,6 @@ void writeAnswersToFile( int Q, int *ans, const char *filename );
 void writeAnswersToStdOut( int Q, int *ans );
 
 void shuffleFathers( vector<int> &in, vector<int> &out, int &root );
+
+int find( int i, vector<int> &boss );
+void junion( int a, int b, vector<int> &boss, vector<int> &father );

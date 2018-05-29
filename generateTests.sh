@@ -1,5 +1,7 @@
+testsDir=$(realpath ~/storage/tests)
+
 function genText {
-    name=tests/$1$(echo $2 | numfmt --to=si).$(echo $3 | numfmt --to=si).t.in
+    name=$testsDir/$1$(echo $2 | numfmt --to=si).$(echo $3 | numfmt --to=si).t.in
     if [ ! -f $name ]; then
         echo "generating $name" 
         ./generate$1.e $2 $3 >$name
@@ -9,7 +11,7 @@ function genText {
 }
 
 function genBin {
-    name=tests/$1$(echo $2 | numfmt --to=si).$(echo $3 | numfmt --to=si).b.in
+    name=$testsDir/$1$(echo $2 | numfmt --to=si).$(echo $3 | numfmt --to=si).b.in
     if [ ! -f $name ]; then
         echo "generating $name" 
         ./generate$1.e $2 $3 $name
@@ -18,7 +20,7 @@ function genBin {
     echo
 }
 
-mkdir tests
+mkdir $testsDir
 make generateSimple.e
 make generateLongSimple.e
 
@@ -47,21 +49,26 @@ make generateLongSimple.e
 # genBin Simple 9000 9000
 # genBin Simple 1000000 100000
 # genBin Simple 5000000 500000
-genBin Simple 10000000 1000000
+# genBin Simple 10000000 1000000
 # genBin Simple 15000000 1500000
 # genBin Simple 20000000 2000000
 # genBin Simple 25000000 2500000
 # genBin Simple 30000000 3000000
-# genBin Simple 35000000 35000000
-# genBin Simple 40000000 40000000
-# genBin Simple 50000000 50000000
+# genBin Simple 35000000 3500000
+# genBin Simple 40000000 4000000
+# genBin Simple 45000000 4000000
+# genBin Simple 50000000 5000000
 
-# genBin LongSimple 30000000 30000
-# genBin LongSimple 25000000 30000
-# genBin LongSimple 20000000 30000
-# genBin LongSimple 15000000 30000
-# genBin LongSimple 10000000 30000
-# genBin LongSimple 5000000 30000
-# genBin LongSimple 1000000 30000
+genBin LongSimple 50000000 300000
+genBin LongSimple 45000000 300000
+genBin LongSimple 40000000 300000
+genBin LongSimple 35000000 300000
+# genBin LongSimple 30000000 3000
+# genBin LongSimple 25000000 3000
+# genBin LongSimple 20000000 3000
+# genBin LongSimple 15000000 3000
+# genBin LongSimple 10000000 3000
+# genBin LongSimple 5000000 3000
+# genBin LongSimple 1000000 3000
 
 echo "OK"
