@@ -7,7 +7,7 @@ using namespace std;
 
 void dfsRmq( int starting, vector<int> son, vector<int> neighbour );
 void initIntervalTree( int n, int power );
-int rmqMin( int p, int q, int skad, int dokad, int gdzie );
+int rmqMin( int p, int q, int size );
 
 int INF;
 
@@ -90,7 +90,7 @@ int main( int argc, char *argv[] )
 
     if ( p > q ) swap( p, q );
 
-    answers[i] = reversePreorder[rmqMin( p, q, 0, treePower - 1, 0 )];
+    answers[i] = reversePreorder[rmqMin( p, q, treePower )];
   }
 
   timer.measureTime( tc.q.N );
@@ -157,12 +157,20 @@ void initIntervalTree( int n, int power )
     rmqTab[i] = min( rmqTab[i * 2 + 1], rmqTab[i * 2 + 2] );
   }
 }
-int rmqMin( int p, int q, int skad, int dokad, int gdzie )
+int rmqMin( int p, int q, int size )
 {
-  if ( p == skad && q == dokad ) return rmqTab[gdzie];
-  if ( p > ( skad + dokad ) / 2 ) return rmqMin( p, q, ( skad + dokad ) / 2 + 1, dokad, gdzie * 2 + 2 );
-  if ( q <= ( skad + dokad ) / 2 ) return rmqMin( p, q, skad, ( skad + dokad ) / 2, gdzie * 2 + 1 );
+  int *tab = rmqTab - 1;
 
-  return min( rmqMin( p, ( skad + dokad ) / 2, skad, ( skad + dokad ) / 2, gdzie * 2 + 1 ),
-              rmqMin( ( skad + dokad ) / 2 + 1, q, ( skad + dokad ) / 2 + 1, dokad, gdzie * 2 + 2 ) );
+  p += size;
+  q += size;
+  int res = tab[p];
+  res = min( res, tab[q] );
+  while ( p / 2 != q / 2 )
+  {
+    if ( p % 2 == 0 ) res = min( res, tab[p+1] );
+    if ( q % 2 == 1 ) res = min( res, tab[q-1] );
+    p /= 2;
+    q /= 2;
+  }
+  return res;
 }
