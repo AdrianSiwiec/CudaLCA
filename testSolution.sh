@@ -1,6 +1,6 @@
-# toTest="cudaSimpleLCA"
+toTest="cudaSimpleLCA"
 # toTest="cudaInlabelLCA"
-toTest="cpuRmqLCA"
+# toTest="cpuRmqLCA"
 
 # echo "Generating Tests"
 # ./generateTests.sh 
@@ -15,8 +15,8 @@ make $toTest.e
 for i in $(ls $testsDir/*.b.in); do
     i=$(basename $i)
     outName=$testsDir/${i::-3}.out
-    ./$toTest.e $testsDir/$i out 2>/dev/null
     echo "Testing on $i"
+    ./$toTest.e $testsDir/$i out 2>/dev/null
     if diff out $outName >/dev/null; then
         echo "$i OK"
     else

@@ -120,7 +120,6 @@ void writeToStdOut( TestCase &tc )
     cout << tc.q.tab[i] << " ";
   }
   cout << endl;
-
 }
 
 TestCase readFromFile( const char *filename )

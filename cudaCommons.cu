@@ -5,6 +5,8 @@
 #include "commons.h"
 #include "cudaCommons.h"
 
+#define ull unsigned long long
+
 using namespace std;
 using namespace mgpu;
 
@@ -16,62 +18,61 @@ void CudaSimpleListRank(
   int *notAllDone;
   cudaMallocHost( &notAllDone, sizeof( int ) );
 
-  int *devTmp;
+  ull *devRankNext;
+  int *devTmpRank;
+  int *devTmpNext;
   int *devNotAllDone;
 
-  CUCHECK( cudaMalloc( (void **) &devTmp, sizeof( int ) * N ) );
+  CUCHECK( cudaMalloc( (void **) &devRankNext, sizeof( ull ) * N ) );
+  CUCHECK( cudaMalloc( (void **) &devTmpRank, sizeof( int ) * N ) );
+  CUCHECK( cudaMalloc( (void **) &devTmpNext, sizeof( int ) * N ) );
   CUCHECK( cudaMalloc( (void **) &devNotAllDone, sizeof( int ) ) );
+
+  transform(
+      [=] MGPU_DEVICE( int thid ) { devRankNext[thid] = ( ( (ull) 0 ) << 32 ) + devNext[thid] + 1; }, N, context );
+
+  const int loopsWithoutSync = 10;
 
   do
   {
     transform(
         [=] MGPU_DEVICE( int thid ) {
-          if ( thid == 0 ) *devNotAllDone = 0;
+          ull rankNext = devRankNext[thid];
+          for ( int i = 0; i < loopsWithoutSync; i++ )
+          {
+            if ( thid == 0 ) *devNotAllDone = 0;
 
-          int nxt = devNext[thid];
-          if ( nxt == -1 ) return;
-          devTmp[thid] = devRank[nxt] + 1;
+            int rank = rankNext >> 32;
+            int nxt = rankNext - 1;
+
+            if ( nxt != -1 )
+            {
+              ull grandNext = devRankNext[nxt];
+
+              rank += ( grandNext >> 32 ) + 1;
+              nxt = grandNext - 1;
+
+              rankNext = ( ( (ull) rank ) << 32 ) + nxt + 1;
+              atomicExch( devRankNext + thid, rankNext );
+
+              if ( i == loopsWithoutSync - 1 ) *devNotAllDone = 1;
+            }
+          }
         },
         N,
         context );
-    context.synchronize();
 
-    transform(
-        [=] MGPU_DEVICE( int thid ) {
-          if ( devNext[thid] == -1 ) return;
-          devRank[thid] += devTmp[thid];
-        },
-        N,
-        context );
-    context.synchronize();
-
-    transform(
-        [=] MGPU_DEVICE( int thid ) {
-          if ( devNext[thid] == -1 ) return;
-          devTmp[thid] = devNext[devNext[thid]];
-        },
-        N,
-        context );
-    context.synchronize();
-
-
-    transform(
-        [=] MGPU_DEVICE( int thid ) {
-          if ( devNext[thid] == -1 ) return;
-
-          devNext[thid] = devTmp[thid];
-
-          *devNotAllDone = 1;
-        },
-        N,
-        context );
     context.synchronize();
 
     CUCHECK( cudaMemcpy( notAllDone, devNotAllDone, sizeof( int ), cudaMemcpyDeviceToHost ) );
   } while ( *notAllDone );
 
+  transform( [=] MGPU_DEVICE( int thid ) { devRank[thid] = devRankNext[thid] >> 32; }, N, context );
+  context.synchronize();
+
   cudaFree( notAllDone );
-  CUCHECK( cudaFree( devTmp ) );
+  CUCHECK( cudaFree( devTmpRank ) );
+  CUCHECK( cudaFree( devTmpNext ) );
   CUCHECK( cudaFree( devNotAllDone ) );
 }
 

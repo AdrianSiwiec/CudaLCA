@@ -60,6 +60,8 @@ int main( int argc, char *argv[] )
 
   CudaSimpleListRank( devDepth, V, devNext, threadsPerBlockX, blockPerGridX, context );
 
+  context.synchronize();
+
   timer.setPrefix( "Queries" );
 
   int Q = tc.q.N;

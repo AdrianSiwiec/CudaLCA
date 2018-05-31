@@ -10,11 +10,12 @@ solutionsToTest=(
 # echo "Generating Answers"
 # ./generateAnswers.sh 
 
-testsDir=$(realpath ~/storage/tests)
+# testsDir=$(realpath ~/storage/tests)
+testsDir=tests
 
 mkdir timesResults
 
-repeatTimes=5
+repeatTimes=10
 
 progressBarWidth=30
 
