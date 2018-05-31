@@ -1,9 +1,12 @@
 #include <cuda_runtime.h>
 #include <iostream>
+#include <moderngpu/kernel_mergesort.hxx>
 #include <moderngpu/kernel_scan.hxx>
 #include <moderngpu/transform.hxx>
 #include "commons.h"
 #include "cudaCommons.h"
+
+#define ll long long
 
 using namespace std;
 using namespace mgpu;
@@ -39,23 +42,57 @@ int main( int argc, char *argv[] )
   const int V = tc.tree.V;
   const int root = tc.tree.root;
 
+  int *devFather;
+  CUCHECK( cudaMalloc( (void **) &devFather, sizeof( int ) * V ) );
+  CUCHECK( cudaMemcpy( devFather, tc.tree.father.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
+
   int *devSon;
   int *devNeighbour;
-  int *devFather;
   int *devNextEdge;
   CUCHECK( cudaMalloc( (void **) &devSon, sizeof( int ) * V ) );
   CUCHECK( cudaMalloc( (void **) &devNeighbour, sizeof( int ) * V ) );
-  CUCHECK( cudaMalloc( (void **) &devFather, sizeof( int ) * V ) );
-  CUCHECK( cudaMalloc( (void **) &devNextEdge, sizeof( int ) * V * 2 ) );
+
+  transform(
+      [=] MGPU_DEVICE( int thid ) {
+        devSon[thid] = -1;
+        devNeighbour[thid] = -1;
+      },
+      V,
+      context );
 
   timer.measureTime( "Device Allocs" );
 
-  CUCHECK( cudaMemcpy( devSon, tc.tree.son.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
-  CUCHECK( cudaMemcpy( devNeighbour, tc.tree.neighbour.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
-  CUCHECK( cudaMemcpy( devFather, tc.tree.father.data(), sizeof( int ) * V, cudaMemcpyHostToDevice ) );
+  ll *devEdges;
+  CUCHECK( cudaMalloc( (void **) &devEdges, sizeof( ll ) * V ) );
 
-  timer.measureTime( "Device Memcpy" );
+  transform( [=] MGPU_DEVICE( int thid ) { devEdges[thid] = ( ( (ll) devFather[thid] ) << 32 ) + thid; }, V, context );
 
+  mergesort( devEdges, V, [] MGPU_DEVICE( ll a, ll b ) { return a < b; }, context );
+
+  transform( //TODO speedup by less threads
+      [=] MGPU_DEVICE( int thid ) {
+        ll prevEdge = devEdges[thid];
+        ll myEdge = devEdges[thid + 1];
+        if ( prevEdge >> 32 == myEdge >> 32 )
+          devNeighbour[(int) prevEdge] = (int) myEdge;
+        else
+          devSon[myEdge >> 32] = (int) myEdge;
+      },
+      V - 1,
+      context );
+
+  // ll *edges = new ll( V );
+  // CUCHECK( cudaMemcpy( edges, devEdges, sizeof( ll ) * V, cudaMemcpyDeviceToHost ) );
+
+  // for ( int i = 0; i < V; i++ )
+  // {
+  //   int from = edges[i] >> 32;
+  //   int to = edges[i];
+  //   cout << from << " " << to << endl;
+  // }
+
+
+  CUCHECK( cudaMalloc( (void **) &devNextEdge, sizeof( int ) * V * 2 ) );
   transform(
       [=] MGPU_DEVICE( int thid ) {
         int v = thid / 2;
@@ -92,7 +129,9 @@ int main( int argc, char *argv[] )
   int *devEdgeRank;
   CUCHECK( cudaMalloc( (void **) &devEdgeRank, sizeof( int ) * V * 2 ) );
 
-  transform( [=] MGPU_DEVICE( int thid ) { devEdgeRank[thid] = 0; }, V * 2, context );
+  CUCHECK( cudaMemset( devEdgeRank, 0, V * 2 ) );
+  // transform( [=] MGPU_DEVICE( int thid ) { devEdgeRank[thid] = 0; }, V * 2, context );
+
   context.synchronize();
 
   timer.measureTime( "Init devNextEdge and devEdgeRank" );

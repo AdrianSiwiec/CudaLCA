@@ -5,7 +5,7 @@
 
 using namespace std;
 
-void dfsRmq( int v );
+void dfsRmq( int starting, vector<int> son, vector<int> neighbour );
 void initIntervalTree( int n, int power );
 int rmqMin( int p, int q, int skad, int dokad, int gdzie );
 
@@ -57,22 +57,24 @@ int main( int argc, char *argv[] )
   tree = &tc.tree;
   preCounter = 0;
 
+  vector<int> son( V, -1 );
+  vector<int> neighbour( V, -1 );
+
+  for ( int i = 0; i < V; i++ )
+  {
+    if ( tc.tree.father[i] == -1 ) continue;
+    if ( son[tc.tree.father[i] != -1] )
+    {
+      neighbour[i] = son[tc.tree.father[i]];
+    }
+    son[tc.tree.father[i]] = i;
+  }
+
   timer.measureTime( "Allocs" );
 
-  //   cout << tree->sons[0].size() << endl;
 
-  dfsRmq( root );
+  dfsRmq( root, son, neighbour );
 
-
-  //   for ( int i = 0; i < V; i++ )
-  //   {
-  //     cout << preorder[i] << " ";
-  //   }
-  //   cout << endl;
-  //   for ( int i = 0; i < rmqTabSize; i++ )
-  //   {
-  //     cout << dfsEulerPath[i] << " " << endl;
-  //   }
 
   initIntervalTree( rmqTabSize, treePower );
 
@@ -105,7 +107,7 @@ int main( int argc, char *argv[] )
 
   timer.measureTime();
 }
-void dfsRmq( int starting )
+void dfsRmq( int starting, vector<int> son, vector<int> neighbour )
 {
   stack<int> s1;
   s1.push( starting );
@@ -130,9 +132,9 @@ void dfsRmq( int starting )
       continue;
     }
 
-    for ( int son = tree->son[v]; son != -1; son = tree->neighbour[son] )
+    for ( int s = son[v]; s != -1; s = neighbour[s] )
     {
-      s1.push( son );
+      s1.push( s );
     }
 
     s2.push( v );

@@ -24,8 +24,6 @@ struct ParentsTree
   int V;
   int root;
   vector<int> father;
-  vector<int> neighbour;
-  vector<int> son;
 
   ParentsTree();
   ParentsTree( int V, int root, const vector<int> &father );

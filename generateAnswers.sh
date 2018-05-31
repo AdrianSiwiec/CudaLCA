@@ -1,9 +1,10 @@
-solutionForAnswers=cpuRmqLCA.e
-# solutionForAnswers=cpuSimpleLCA.e
+# solutionForAnswers=cpuRmqLCA.e
+solutionForAnswers=cpuSimpleLCA.e
 
 make $solutionForAnswers
 
-testsDir=$(realpath ~/storage/tests)
+# testsDir=$(realpath ~/storage/tests)
+testsDir=tests
 
 for i in $(ls $testsDir); do
     i=$(basename $i)

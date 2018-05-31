@@ -42,34 +42,8 @@ double Timer::resetTimer( clock_t &timer )
 }
 
 
-ParentsTree::ParentsTree() : V( 0 ), root( 0 ), father( vector<int>() ), son( vector<int>() ) {}
-ParentsTree::ParentsTree( int V, int root, const vector<int> &father ) : V( V ), root( root ), father( father )
-{
-  son = vector<int>( V, -1 );
-
-  for ( int i = 0; i < V; i++ )
-  {
-    if ( father[i] != -1 && son[father[i]] == -1 )
-    {
-      son[father[i]] = i;
-    }
-  }
-
-  neighbour = vector<int>( V, -1 );
-
-  vector<int> lastSon( V, -1 );
-  for ( int i = 0; i < V; i++ )
-  {
-    if ( father[i] != -1 )
-    {
-      if ( lastSon[father[i]] != -1 )
-      {
-        neighbour[lastSon[father[i]]] = i;
-      }
-      lastSon[father[i]] = i;
-    }
-  }
-}
+ParentsTree::ParentsTree() : V( 0 ), root( 0 ) {}
+ParentsTree::ParentsTree( int V, int root, const vector<int> &father ) : V( V ), root( root ), father( father ) {}
 ParentsTree::ParentsTree( ifstream &in )
 {
   in.read( (char *) &V, sizeof( int ) );
@@ -77,18 +51,12 @@ ParentsTree::ParentsTree( ifstream &in )
 
   father.resize( V );
   in.read( (char *) father.data(), sizeof( int ) * V );
-  neighbour.resize( V );
-  in.read( (char *) neighbour.data(), sizeof( int ) * V );
-  son.resize( V );
-  in.read( (char *) son.data(), sizeof( int ) * V );
 }
 void ParentsTree::writeToStream( ofstream &out )
 {
   out.write( (char *) &V, sizeof( int ) );
   out.write( (char *) &root, sizeof( int ) );
   out.write( (char *) father.data(), sizeof( int ) * V );
-  out.write( (char *) neighbour.data(), sizeof( int ) * V );
-  out.write( (char *) son.data(), sizeof( int ) * V );
 }
 
 Queries::Queries() : N( 0 ), tab( vector<int>() ) {}
@@ -145,16 +113,6 @@ void writeToStdOut( TestCase &tc )
     cout << tc.tree.father[i] << " ";
   }
   cout << endl;
-  for ( int i = 0; i < tc.tree.V; i++ )
-  {
-    cout << tc.tree.neighbour[i] << " ";
-  }
-  cout << endl;
-  for ( int i = 0; i < tc.tree.V; i++ )
-  {
-    cout << tc.tree.son[i] << " ";
-  }
-  cout << endl;
 
   cout << tc.q.N << endl;
   for ( int i = 0; i < tc.q.N * 2; i++ )
@@ -162,6 +120,7 @@ void writeToStdOut( TestCase &tc )
     cout << tc.q.tab[i] << " ";
   }
   cout << endl;
+
 }
 
 TestCase readFromFile( const char *filename )
@@ -179,19 +138,6 @@ TestCase readFromStdIn()
   {
     cin >> tree.father[i];
   }
-
-  tree.neighbour.resize( tree.V );
-  for ( int i = 0; i < tree.V; i++ )
-  {
-    cin >> tree.neighbour[i];
-  }
-
-  tree.son.resize( tree.V );
-  for ( int i = 0; i < tree.V; i++ )
-  {
-    cin >> tree.son[i];
-  }
-
 
   int N;
   cin >> N;

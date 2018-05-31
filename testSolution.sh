@@ -1,13 +1,14 @@
 # toTest="cudaSimpleLCA"
-toTest="cudaInlabelLCA"
-# toTest="cpuRmqLCA"
+# toTest="cudaInlabelLCA"
+toTest="cpuRmqLCA"
 
 # echo "Generating Tests"
 # ./generateTests.sh 
 echo "Generating Answers"
 ./generateAnswers.sh 
 
-testsDir=$(realpath ~/storage/tests)
+# testsDir=$(realpath ~/storage/tests)
+testsDir=tests
 
 make $toTest.e
 
