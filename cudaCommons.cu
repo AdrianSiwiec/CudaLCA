@@ -12,20 +12,15 @@ using namespace mgpu;
 
 __device__ int cuAbs( int i );
 
-void CudaSimpleListRank(
-    int *devRank, int N, int *devNext, int threadsPerBlockX, int blocksPerGridX, standard_context_t &context )
+void CudaSimpleListRank( int *devRank, int N, int *devNext, standard_context_t &context )
 {
   int *notAllDone;
   cudaMallocHost( &notAllDone, sizeof( int ) );
 
   ull *devRankNext;
-  int *devTmpRank;
-  int *devTmpNext;
   int *devNotAllDone;
 
   CUCHECK( cudaMalloc( (void **) &devRankNext, sizeof( ull ) * N ) );
-  CUCHECK( cudaMalloc( (void **) &devTmpRank, sizeof( int ) * N ) );
-  CUCHECK( cudaMalloc( (void **) &devTmpNext, sizeof( int ) * N ) );
   CUCHECK( cudaMalloc( (void **) &devNotAllDone, sizeof( int ) ) );
 
   transform(
@@ -71,8 +66,7 @@ void CudaSimpleListRank(
   context.synchronize();
 
   cudaFree( notAllDone );
-  CUCHECK( cudaFree( devTmpRank ) );
-  CUCHECK( cudaFree( devTmpNext ) );
+  cudaFree( devRankNext );
   CUCHECK( cudaFree( devNotAllDone ) );
 }
 
@@ -81,23 +75,11 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   Timer listTimer( "List Rank" );
   int s;
   if ( N > 1000000 )
-    s = 50000;
+    s = 800;
   else
     s = N / 100;
   if ( s == 0 ) s = 1;
 
-
-  int *sum;
-  int *last;
-  int *next;
-  sum = new int[s + 1];
-  last = new int[s + 1];
-  next = new int[N];
-  // cudaMallocHost( &sum, sizeof( int ) * ( s + 1 ) );
-  // cudaMallocHost( &last, sizeof( int ) * ( s + 1 ) );
-  // cudaMallocHost( &next, sizeof( int ) * N );
-
-  listTimer.measureTime( "Host Allocs" );
 
   int *devSum;
   CUCHECK( cudaMalloc( (void **) &devSum, sizeof( int ) * ( s + 1 ) ) );
@@ -135,18 +117,17 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
       s,
       context );
 
-  listTimer.measureTime( "CPU generating splitters" );
+  context.synchronize();
+  listTimer.measureTime( "GPU generating splitters" );
 
   transform(
       [=] MGPU_DEVICE( int thid ) {
-        int current;
-        current = devSublistHead[thid];
-
+        int current = devSublistHead[thid];
         int counter = 0;
+
         while ( current >= 0 )
         {
-          devRank[current] = counter;
-          counter++;
+          devRank[current] = counter++;
 
           int n = devNext[current];
 
@@ -166,29 +147,25 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
 
   listTimer.measureTime( "GPU sublist rank calculation" );
 
-  CUCHECK( cudaMemcpy( sum, devSum, sizeof( int ) * ( s + 1 ), cudaMemcpyDeviceToHost ) );
-  CUCHECK( cudaMemcpy( next, devNext, sizeof( int ) * N, cudaMemcpyDeviceToHost ) );
-  CUCHECK( cudaMemcpy( last, devLast, sizeof( int ) * ( s + 1 ), cudaMemcpyDeviceToHost ) );
+  transform(
+      [=] MGPU_DEVICE( int thid ) {
+        int tmpSum = 0;
+        int current = head;
+        int currentSublist = 0;
+        for ( int i = 0; i <= s; i++ )
+        {
+          tmpSum += devSum[currentSublist];
+          devSum[currentSublist] = tmpSum - devSum[currentSublist];
 
-  listTimer.measureTime( "Copy sublists to Host" );
+          current = devLast[currentSublist];
+          currentSublist = -devNext[current] - 1;
+        }
+      },
+      1,
+      context );
 
-
-  int tmpSum = 0;
-  int current = head;
-  int currentSublist = 0;
-  for ( int i = 0; i <= s; i++ )
-  {
-    tmpSum += sum[currentSublist];
-    sum[currentSublist] = tmpSum - sum[currentSublist];
-
-    current = last[currentSublist];
-    currentSublist = -next[current] - 1;
-  }
-
-
-  CUCHECK( cudaMemcpy( devSum, sum, sizeof( int ) * ( s + 1 ), cudaMemcpyHostToDevice ) );
-
-  listTimer.measureTime( "CPU adding sums" );
+  context.synchronize();
+  listTimer.measureTime( "GPU Adding Times" );
 
   transform(
       [=] MGPU_DEVICE( int thid ) {
@@ -200,13 +177,6 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   context.synchronize();
 
   listTimer.measureTime( "GPU final rank" );
-
-  delete[] next;
-  delete[] sum;
-  delete[] last;
-  // cudaFreeHost( next );
-  // cudaFreeHost( sum );
-  // cudaFreeHost( last );
 
   CUCHECK( cudaFree( devSum ) );
   CUCHECK( cudaFree( devSublistHead ) );

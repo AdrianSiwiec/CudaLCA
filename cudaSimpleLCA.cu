@@ -58,7 +58,7 @@ int main( int argc, char *argv[] )
 
   timer.measureTime( "Copy Input and Init data" );
 
-  CudaSimpleListRank( devDepth, V, devNext, threadsPerBlockX, blockPerGridX, context );
+  CudaSimpleListRank( devDepth, V, devNext, context );
 
   context.synchronize();
 

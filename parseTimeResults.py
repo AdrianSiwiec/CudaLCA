@@ -128,7 +128,7 @@ for testName in testNames:
     print()
 
 testPrefixes = ["Simple", "LongSimple", "kron_g500", "road"]
-sectionNames = ["Preprocessing", "AvgQueryTime(ns)"]
+sectionNames = ["Preprocessing", "AvgQueryTime(ns)", "List Rank"]
 
 for testPrefix in testPrefixes:
     print(testPrefix)

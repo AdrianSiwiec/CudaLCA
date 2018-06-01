@@ -49,12 +49,12 @@ make generateLongSimple.e
 # genBin Simple 8000 8000
 # genBin Simple 9000 9000
 genBin Simple 1000000 100000
-genBin Simple 5000000 500000
-genBin Simple 10000000 1000000
-genBin Simple 15000000 1500000
-genBin Simple 20000000 2000000
-genBin Simple 25000000 2500000
-genBin Simple 30000000 3000000
+# genBin Simple 5000000 500000
+# genBin Simple 10000000 1000000
+# genBin Simple 15000000 1500000
+# genBin Simple 20000000 2000000
+# genBin Simple 25000000 2500000
+# genBin Simple 30000000 3000000
 # genBin Simple 35000000 3500000
 # genBin Simple 40000000 4000000
 # genBin Simple 45000000 4000000

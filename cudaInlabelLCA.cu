@@ -130,16 +130,12 @@ int main( int argc, char *argv[] )
   CUCHECK( cudaMalloc( (void **) &devEdgeRank, sizeof( int ) * V * 2 ) );
 
   CUCHECK( cudaMemset( devEdgeRank, 0, V * 2 ) );
-  // transform( [=] MGPU_DEVICE( int thid ) { devEdgeRank[thid] = 0; }, V * 2, context );
 
   context.synchronize();
 
   timer.measureTime( "Init devNextEdge and devEdgeRank" );
 
-  // int threadsPerBlockX = 1024;
-  // int blocksPerGridX = ( V * 2 + threadsPerBlockX - 1 ) / threadsPerBlockX;
-  // CudaSimpleListRank( devEdgeRank, V * 2, devNextEdge, threadsPerBlockX, blocksPerGridX );
-
+  // CudaSimpleListRank( devEdgeRank, V * 2, devNextEdge, context);
   CudaFastListRank( devEdgeRank, V * 2, getEdgeCode( root, 0 ), devNextEdge, context );
 
   CUCHECK( cudaFree( devNextEdge ) );
@@ -370,13 +366,9 @@ int main( int argc, char *argv[] )
         }
 
         if ( devLevel[suspects[0]] < devLevel[suspects[1]] )
-        {
           devAnswers[thid] = suspects[0];
-        }
         else
-        {
           devAnswers[thid] = suspects[1];
-        }
       },
       Q,
       context );

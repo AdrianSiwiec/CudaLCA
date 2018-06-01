@@ -1,6 +1,6 @@
 solutionsToTest=(
-    # "cudaInlabelLCA"
-    "cudaSimpleLCA"
+    "cudaInlabelLCA"
+    # "cudaSimpleLCA"
     # "cpuRmqLCA"
 )
 
