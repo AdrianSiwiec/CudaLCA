@@ -4,19 +4,24 @@ import sys
 
 resultsDirectory = ""
 if len(sys.argv) <= 1:
-    resultsDirectory = "./timesResults/"
+    resultsDirectory = "./resultTimes/E1/"
 else:
     resultsDirectory = sys.argv[1]
 
+if not resultsDirectory.endswith("/"):
+    resultsDirectory+="/"
+
 
 class result:
-    def __init__(self, solutionName, testName, timestamp, combined, singleResults):
+
+    def __init__(self, solutionName, testName, timestamp, combined, singleResults, parameters):
         # self.solutionName = solutionName
-        self.solutionName = solutionName+" ("+timestamp+")"
+        self.solutionName = solutionName + " (" + timestamp + ")"
         self.testName = testName
         self.timestamp = timestamp
         self.combined = combined
         self.singleResults = singleResults
+        self.parameters = parameters
 
         numOfQueries = 0
         combinedQueryTimes = 0.0
@@ -24,9 +29,9 @@ class result:
             numOfQueries += s.numOfQueries
             combinedQueryTimes += s.combinedQueryTimes
 
-        if(numOfQueries > 0):
-            self.oneQueryTime = combinedQueryTimes/numOfQueries
-            self.combined.append(("AvgQueryTime(ns)", self.oneQueryTime*10**9))
+        if (numOfQueries > 0):
+            self.oneQueryTime = combinedQueryTimes / numOfQueries
+            self.combined.append(("AvgQueryTime(ns)", self.oneQueryTime * 10**9))
         else:
             self.oneQueryTime = 0
 
@@ -35,6 +40,7 @@ class result:
 
 
 class singleResult:  # whole
+
     def __init__(self, rawSingleResult):
         self.sectionNames = []
         self.sectionTimes = []
@@ -56,10 +62,16 @@ class singleResult:  # whole
 
 
 def getResultFromFilename(filename):
-    solutionName, testName, timestamp = filename[:-4].split("#")
+    print(filename)
+    solutionName, testName, timestamp = filename[:-4].split("$")
+    testProperties = testName.split("#")
+    testProperties[:] = [prop.split(":") for prop in testProperties]
+
+    testProperties = {prop[0]: prop[1] for prop in testProperties}
+    print(testProperties)
 
     content = []
-    with open(resultsDirectory+filename) as rawResult:
+    with open(resultsDirectory + filename) as rawResult:
         content.extend(rawResult.read().split("\n\n"))
 
     singleResults = []
@@ -87,11 +99,11 @@ def getResultFromFilename(filename):
         time /= len(times[i])
         results.append((names[i], time))
 
-    return result(solutionName, testName, timestamp, results, singleResults)
+    return result(solutionName, testName, timestamp, results, singleResults, testProperties)
 
 
 resultsRaw = []
-for(dirpath, dirnames, filenames) in os.walk(resultsDirectory):
+for (dirpath, dirnames, filenames) in os.walk(resultsDirectory):
     resultsRaw.extend(filenames)
     break
 
@@ -110,49 +122,131 @@ for res in results:
     if not res.solutionName in solutions:
         solutions.append(res.solutionName)
 
-
 for testName in testNames:
-    print("Results on "+testName)
+    print("Results on " + testName)
 
     for solution in solutions:
-        print(" "+solution+":")
+        print(" " + solution + ":")
 
         for res in results:
             if res.solutionName == solution and res.testName == testName:
-                print("   (timestamp: "+res.timestamp)
+                print("   (timestamp: " + res.timestamp)
                 for c in res.combined:
-                    print('   {:<18}{:>18}ms'.format(c[0], str(round(c[1],4))))
+                    print('   {:<18}{:>18}ms'.format(c[0], str(round(c[1], 4))))
 
-                print('   {:<18}{:>18}ns'.format("AverageQueryTime", round(res.oneQueryTime*10**9, 4)))
+                print('   {:<18}{:>18}ns'.format("AverageQueryTime", round(res.oneQueryTime * 10**9, 4)))
                 print()
     print()
 
-testPrefixes = ["Simple", "LongSimple", "kron_g500", "road"]
-sectionNames = ["Preprocessing", "AvgQueryTime(ns)", "List Rank"]
 
-for testPrefix in testPrefixes:
-    print(testPrefix)
+experimentName=os.path.basename(os.path.dirname(resultsDirectory))
+
+if experimentName=="E1":
+    testsParameters = ["V"]
+    # testsConstraints = [{"grasp": -1}]
+    testsConstraints = [{"grasp": 10}]
+    testsParametersValues = []
+elif experimentName=="E2":
+    testsParameters = ["batch"]
+    testsConstraints = [{}]
+    testsParametersValues = []
+elif experimentName=="E3":
+    testsParameters = ["grasp"]
+    testsConstraints = [{}]
+    testsParametersValues = []
+else:
+    print("Only E1, E2, E3 supported for now")
+    exit(1)
+    # testsParameters = ["grasp"]
+    # testsConstraints = [{"V": 1000000}]
+    # testsParametersValues = []
+
+
+for i, name in enumerate(testsParameters):
+    while len(testsParametersValues) <= i:
+        testsParametersValues.append([])
+    for res in results:
+        if name in res.parameters:
+            if res.parameters[name] not in testsParametersValues[i]:
+                testsParametersValues[i].append(res.parameters[name])
+
+print("Results of experiment: " + experimentName)
+
+sectionNames = ["Preprocessing", "AvgQueryTime(ns)"]
+# sectionNames = ["Preprocessing", "AvgQueryTime(ns)", "List Rank"]
+
+for i, param in enumerate(testsParameters):
+    print("Results by " + param+",")
     for sectionName in sectionNames:
-        print(sectionName+",", end="")
-        for testName in testNames:
-            if testName.startswith(testPrefix):
-                print(testName + ",", end="")
-
+        print(sectionName +",", end="")
+        for paramValue in testsParametersValues[i]:
+            print(paramValue+",", end="")
         print()
-
         for solution in solutions:
-            print(solution+",", end="")
-            for res in results:
+            print(solution + ",", end="")
+            for paramValue in testsParametersValues[i]:
                 for testName in testNames:
-                    if  testName.startswith(testPrefix) and res.solutionName == solution and res.testName == testName:
-                        for sectionRes in res.combined:
-                            if(sectionRes[0] == sectionName):
-                                print(str(round(sectionRes[1], 4))+",", end="")
+                    for res in results:
+                        if (res.testName == testName and res.parameters[param] == paramValue and
+                                res.solutionName == solution):
+                            isOk=True
+                            for c in testsConstraints[i]:
+                                if res.parameters[c] != str(testsConstraints[i][c]):
+                                    isOk=False
+                            if isOk==True:
+                                for sectionRes in res.combined:
+                                    if (sectionRes[0] == sectionName):
+                                        print(str(round(sectionRes[1], 4)) + ",", end="")
+
             print()
-
         print()
+            
+            # print(paramValue + ":")
+            #     for testName in testNames:
+            #         for res in results:
+            #             if (res.testName == testName and res.parameters[param] == paramValue):
+            #                 print(res.testName + ",", end="")
+            #                 break
 
-    print()
+            #     print()
 
+            #     for solution in solutions:
+            #         print(solution + ",", end="")
+            #         for testName in testNames:
+            #             for res in results:
+            #                 if (res.testName == testName and res.parameters[param] == paramValue and
+            #                         res.solutionName == solution):
+            #                     for sectionRes in res.combined:
+            #                         if (sectionRes[0] == sectionName):
+            #                             print(str(round(sectionRes[1], 4)) + ",", end="")
+            #         print()
+            #     print()
+
+# for testPrefix in testPrefixes:
+#     print(testPrefix)
+#     for sectionName in sectionNames:
+#         print(sectionName + ",", end="")
+#         for testName in testNames:
+#             if testName.startswith(testPrefix):
+#                 print(testName + ",", end="")
+
+#         print()
+
+#         for solution in solutions:
+#             print(solution + ",", end="")
+#             for res in results:
+#                 for testName in testNames:
+#                     if testName.startswith(
+#                             testPrefix
+#                     ) and res.solutionName == solution and res.testName == testName:
+#                         for sectionRes in res.combined:
+#                             if (sectionRes[0] == sectionName):
+#                                 print(
+#                                     str(round(sectionRes[1], 4)) + ",", end="")
+#             print()
+
+#         print()
+
+#     print()
 
 # print(results)

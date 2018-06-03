@@ -6,21 +6,27 @@ using namespace std;
 
 int main( int argc, char* argv[] )
 {
-  if ( argc < 3 )
+  int expectedArgc = 5;
+  if ( argc < expectedArgc )
   {
-    cerr << "2 args needed: V, Q. Add filename for binary output" << endl;
+    cerr << "4 args needed: V, Q, graspSize and Seed. Add filename for binary output" << endl;
     exit( 1 );
   }
   int V = atoi( argv[1] );
   int Q = atoi( argv[2] );
+  int graspSize = atoi( argv[3] );
+  int seed = atoi( argv[4] );
 
-  srand( 241342 + V + Q );
+  srand( seed + V + Q );
 
   vector<int> tab;
   tab.push_back( -1 );
   for ( int i = 1; i < V; i++ )
   {
-    tab.push_back( rand() % i );
+    int minFather = graspSize == -1 ? -1 : i - graspSize;
+    if ( minFather < 0 ) minFather = 0;
+
+    tab.push_back( ( rand() % ( i - minFather ) ) + minFather );
   }
 
   vector<int> father;
@@ -38,8 +44,8 @@ int main( int argc, char* argv[] )
   Queries queries( Q, q );
 
   TestCase tc( tree, queries );
-  if ( argc == 4 )
-    writeToFile( tc, argv[3] );
+  if ( argc == expectedArgc + 1 )
+    writeToFile( tc, argv[expectedArgc] );
   else
     writeToStdOut( tc );
 }

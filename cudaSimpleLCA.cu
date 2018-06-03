@@ -84,6 +84,7 @@ int main( int argc, char *argv[] )
 
   CUCHECK( cudaMemcpy( answers, devAnswers, sizeof( int ) * Q, cudaMemcpyDeviceToHost ) );
 
+  context.synchronize();
   timer.measureTime( "Copy answers to Host" );
   timer.setPrefix( "Write Output" );
 

@@ -21,7 +21,7 @@ int main( int argc, char *argv[] )
 {
   Timer timer( "Parse Input" );
 
-  cudaSetDevice( 1 );
+  cudaSetDevice( 0 );
   standard_context_t context( 0 );
 
   timer.measureTime( "Init cuda" );
@@ -35,6 +35,12 @@ int main( int argc, char *argv[] )
   {
     tc = readFromFile( argv[1] );
   }
+
+  int batchSize;
+  if ( argc > 3 )
+    batchSize = atoi( argv[3] );
+  else
+    batchSize = -1;
 
   timer.measureTime( "Read" );
   timer.setPrefix( "Preprocessing" );
@@ -60,6 +66,7 @@ int main( int argc, char *argv[] )
       V,
       context );
 
+  context.synchronize();
   timer.measureTime( "Device Allocs" );
 
   ll *devEdges;
@@ -69,7 +76,7 @@ int main( int argc, char *argv[] )
 
   mergesort( devEdges, V, [] MGPU_DEVICE( ll a, ll b ) { return a < b; }, context );
 
-  transform( //TODO speedup by less threads
+  transform(  // TODO speedup by less threads
       [=] MGPU_DEVICE( int thid ) {
         ll prevEdge = devEdges[thid];
         ll myEdge = devEdges[thid + 1];
@@ -81,15 +88,7 @@ int main( int argc, char *argv[] )
       V - 1,
       context );
 
-  // ll *edges = new ll( V );
-  // CUCHECK( cudaMemcpy( edges, devEdges, sizeof( ll ) * V, cudaMemcpyDeviceToHost ) );
-
-  // for ( int i = 0; i < V; i++ )
-  // {
-  //   int from = edges[i] >> 32;
-  //   int to = edges[i];
-  //   cout << from << " " << to << endl;
-  // }
+  CUCHECK( cudaFree( devEdges ) );
 
 
   CUCHECK( cudaMalloc( (void **) &devNextEdge, sizeof( int ) * V * 2 ) );
@@ -121,7 +120,6 @@ int main( int argc, char *argv[] )
       },
       V * 2,
       context );
-  context.synchronize();
 
   CUCHECK( cudaFree( devSon ) );
   CUCHECK( cudaFree( devNeighbour ) );
@@ -168,11 +166,15 @@ int main( int argc, char *argv[] )
 
 
   CUCHECK( cudaMalloc( (void **) &devW1, sizeof( int ) * E ) );
+
+  cerr << sizeof( int ) * E << endl;
+
   CUCHECK( cudaMalloc( (void **) &devW1Sum, sizeof( int ) * E ) );
   CUCHECK( cudaMalloc( (void **) &devW2, sizeof( int ) * E ) );
   CUCHECK( cudaMalloc( (void **) &devW2Sum, sizeof( int ) * E ) );
 
 
+  context.synchronize();
   timer.measureTime( "Inlabel allocs" );
 
   transform(
@@ -192,8 +194,13 @@ int main( int argc, char *argv[] )
       E,
       context );
 
+  context.synchronize();
+
+  CUCHECK( cudaFree( devSortedEdges ) );
+
   scan<scan_type_inc>( devW1, E, devW1Sum, context );
   scan<scan_type_inc>( devW2, E, devW2Sum, context );
+  CUCHECK( cudaFree( devW2 ) );
 
   context.synchronize();
 
@@ -227,6 +234,8 @@ int main( int argc, char *argv[] )
       V,
       context );
 
+  CUCHECK( cudaFree( devW2Sum ) );
+
   context.synchronize();
 
   timer.measureTime( "Pre PrePlusSize, Level" );
@@ -242,6 +251,9 @@ int main( int argc, char *argv[] )
       },
       V,
       context );
+
+  CUCHECK( cudaFree( devPreorder ) );
+  CUCHECK( cudaFree( devPrePlusSize ) );
 
   transform(
       [=] MGPU_DEVICE( int thid ) {
@@ -265,6 +277,7 @@ int main( int argc, char *argv[] )
       context );
 
   scan<scan_type_inc>( devW1, E, devW1Sum, context );
+  CUCHECK( cudaFree( devW1 ) );
 
   int l = 31 - __builtin_clz( V );
 
@@ -283,7 +296,11 @@ int main( int argc, char *argv[] )
       V,
       context );
 
+  CUCHECK( cudaFree( devEdgeRank ) );
+
   context.synchronize();
+
+  CUCHECK( cudaFree( devW1Sum ) );
 
   timer.measureTime( "Ascendant scan and calculation" );
 
@@ -307,81 +324,86 @@ int main( int argc, char *argv[] )
 
   int Q = tc.q.N;
 
+  if ( batchSize == -1 ) batchSize = Q;
+
   int *devQueries;
-  CUCHECK( cudaMalloc( (void **) &devQueries, sizeof( int ) * Q * 2 ) );
-  CUCHECK( cudaMemcpy( devQueries, tc.q.tab.data(), sizeof( int ) * Q * 2, cudaMemcpyHostToDevice ) );
-
-  int *devAnswers;
-  CUCHECK( cudaMalloc( (void **) &devAnswers, sizeof( int ) * Q ) );
-
-  timer.measureTime( "Allocs and copy" );
-
-  transform(
-      [=] MGPU_DEVICE( int thid ) {
-        int x = devQueries[thid * 2];
-        int y = devQueries[thid * 2 + 1];
-
-        int inlabelX = devInlabel[x];
-        int inlabelY = devInlabel[y];
-
-        if ( inlabelX == inlabelY )
-        {
-          devAnswers[thid] = devLevel[x] < devLevel[y] ? x : y;
-          return;
-        }
-        int i = 31 - __clz( inlabelX ^ inlabelY );
-
-        int common = devAscendant[x] & devAscendant[y];
-        common = ( ( common >> i ) << i );
-
-        int j = __ffs( common ) - 1;
-
-        int inlabelZ = ( inlabelY >> ( j ) ) << ( j );
-        inlabelZ |= ( 1 << j );
-
-        int suspects[2];
-
-        for ( int a = 0; a < 2; a++ )
-        {
-          int tmpX;
-          if ( a == 0 )
-            tmpX = x;
-          else
-            tmpX = y;
-
-          if ( devInlabel[tmpX] == inlabelZ )
-          {
-            suspects[a] = tmpX;
-          }
-          else
-          {
-            int k = 31 - __clz( devAscendant[tmpX] & ( ( 1 << j ) - 1 ) );
-
-            int inlabelW = ( devInlabel[tmpX] >> k ) << ( k );
-            inlabelW |= ( 1 << k );
-
-            int w = devHead[inlabelW];
-            suspects[a] = devFather[w];
-          }
-        }
-
-        if ( devLevel[suspects[0]] < devLevel[suspects[1]] )
-          devAnswers[thid] = suspects[0];
-        else
-          devAnswers[thid] = suspects[1];
-      },
-      Q,
-      context );
-
-  context.synchronize();
-
-  timer.measureTime( Q );
+  CUCHECK( cudaMalloc( (void **) &devQueries, sizeof( int ) * batchSize * 2 ) );
 
   int *answers = (int *) malloc( sizeof( int ) * Q );
+  int *devAnswers;
+  CUCHECK( cudaMalloc( (void **) &devAnswers, sizeof( int ) * batchSize ) );
 
-  CUCHECK( cudaMemcpy( answers, devAnswers, sizeof( int ) * Q, cudaMemcpyDeviceToHost ) );
+  for ( int qStart = 0; qStart < Q; qStart += batchSize )
+  {
+    int queriesToProcess = min( batchSize, Q - qStart );
 
-  timer.measureTime( "Copy to Host" );
+    CUCHECK( cudaMemcpy(
+        devQueries, tc.q.tab.data() + ( qStart * 2 ), sizeof( int ) * queriesToProcess * 2, cudaMemcpyHostToDevice ) );
+
+
+    transform(
+        [=] MGPU_DEVICE( int thid ) {
+          int x = devQueries[thid * 2];
+          int y = devQueries[thid * 2 + 1];
+
+          int inlabelX = devInlabel[x];
+          int inlabelY = devInlabel[y];
+
+          if ( inlabelX == inlabelY )
+          {
+            devAnswers[thid] = devLevel[x] < devLevel[y] ? x : y;
+            return;
+          }
+          int i = 31 - __clz( inlabelX ^ inlabelY );
+
+          int common = devAscendant[x] & devAscendant[y];
+          common = ( ( common >> i ) << i );
+
+          int j = __ffs( common ) - 1;
+
+          int inlabelZ = ( inlabelY >> ( j ) ) << ( j );
+          inlabelZ |= ( 1 << j );
+
+          int suspects[2];
+
+          for ( int a = 0; a < 2; a++ )
+          {
+            int tmpX;
+            if ( a == 0 )
+              tmpX = x;
+            else
+              tmpX = y;
+
+            if ( devInlabel[tmpX] == inlabelZ )
+            {
+              suspects[a] = tmpX;
+            }
+            else
+            {
+              int k = 31 - __clz( devAscendant[tmpX] & ( ( 1 << j ) - 1 ) );
+
+              int inlabelW = ( devInlabel[tmpX] >> k ) << ( k );
+              inlabelW |= ( 1 << k );
+
+              int w = devHead[inlabelW];
+              suspects[a] = devFather[w];
+            }
+          }
+
+          if ( devLevel[suspects[0]] < devLevel[suspects[1]] )
+            devAnswers[thid] = suspects[0];
+          else
+            devAnswers[thid] = suspects[1];
+        },
+        queriesToProcess,
+        context );
+
+    CUCHECK( cudaMemcpy( answers + qStart, devAnswers, sizeof( int ) * queriesToProcess, cudaMemcpyDeviceToHost ) );
+  }
+
+  context.synchronize();
+  timer.measureTime( Q );
+
   timer.setPrefix( "Write Output" );
 
   if ( argc < 3 )

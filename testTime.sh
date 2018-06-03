@@ -1,23 +1,133 @@
-solutionsToTest=(
-    "cudaInlabelLCA"
-    # "cudaSimpleLCA"
-    # "cpuRmqLCA"
-)
+. testVariables.sh 
 
+. generateTests.sh
 
-# echo "Generating Tests"
-# ./generateTests.sh
-# echo "Generating Answers"
-# ./generateAnswers.sh 
+if $runE1; then
+    echo "Running Experiment 1"
 
-# testsDir=$(realpath ~/storage/tests)
-testsDir=tests
+    if $E1PurgeExistingTests; then
+        echo "Purging Existing Tests"
+        rm $E1TestsDir -rf
+    fi
 
-mkdir timesResults
+    echo "Generating Tests"
+    mkdir -p $E1TestsDir
 
-repeatTimes=10
+    for size in ${E1TestSizes[@]}; do
+        for graspSize in ${E1GraspSizes[@]}; do
+            genTest $E1TestsDir b $size $(($size/10)) $graspSize $E1DifferentSeeds
+        done
+    done
 
-progressBarWidth=30
+    mkdir -p $E1ResultsDir
+
+    for solution in ${E1SolutionsToTest[@]}; do
+        make $solution.e
+        echo "Testing $solution"
+        for test in $E1TestsDir/*.b.in; do
+            testName=$(basename $test)
+            testOutName=$(echo $testName | sed 's/s[0-9][0-9]*.//g')
+            outName=$E1ResultsDir/$solution\$${testOutName::-5}\$$(date '+%Y-%m-%d-%H-%M-%S' -d @$(stat -c %Y $solution.e)).out
+
+            echo "Running $(basename $outName)"
+
+            touch $outName
+            timeout $singleRunTimeout ./$solution.e $test /dev/null $defaultBatchSize 2>>$outName
+            echo "" >>$outName
+        done
+        echo
+    done
+fi
+
+if $runE2; then
+    echo "Running Experiment 2"
+
+    if $E2PurgeExistingTests; then
+        echo "Purging Existing Tests"
+        rm $E2TestsDir -rf
+    fi
+
+    echo "Generating Tests"
+    mkdir -p $E2TestsDir
+    mkdir -p $E2ResultsDir
+
+    for size in ${E2TestSizes[@]}; do
+        for graspSize in ${E2GraspSizes[@]}; do
+            genTest $E2TestsDir b $size $size $graspSize $E2DifferentSeeds
+        done
+    done
+
+    for solution in ${E2SolutionsToTest[@]}; do
+        make $solution.e
+        echo "Testing $solution"
+        for test in $E2TestsDir/*.b.in; do
+            for batch in ${E2BatchSizes[@]}; do
+                testName=$(basename $test)
+                testOutName=$(echo $testName | sed 's/s[0-9][0-9]*.//g')
+                outName=$E2ResultsDir/$solution\$batch:$batch#${testOutName::-5}\$$(date '+%Y-%m-%d-%H-%M-%S' -d @$(stat -c %Y $solution.e)).out
+
+                echo "Running $(basename $outName)"
+
+                touch $outName
+                timeout $singleRunTimeout ./$solution.e $test /dev/null $batch 2>>$outName
+                echo "" >>$outName
+            done
+        done
+        echo
+    done
+fi
+
+if $runE3; then
+    echo "Running Experiment 3"
+
+    if $E3PurgeExistingTests; then
+        echo "Purging Existing Tests"
+        rm $E3TestsDir -rf
+    fi
+
+    echo "Generating Tests"
+    mkdir -p $E3TestsDir
+    mkdir -p $E3ResultsDir
+
+    for size in ${E3TestSizes[@]}; do
+        for graspSize in ${E3GraspSizes[@]}; do
+            genTest $E3TestsDir b $size $size $graspSize $E3DifferentSeeds
+        done
+    done
+
+    mkdir -p $E3ResultsDir
+
+    for solution in ${E3SolutionsToTest[@]}; do
+        make $solution.e
+        echo "Testing $solution"
+        for test in $E3TestsDir/*.b.in; do
+            testName=$(basename $test)
+            testOutName=$(echo $testName | sed 's/s[0-9][0-9]*.//g')
+            outName=$E3ResultsDir/$solution\$${testOutName::-5}\$$(date '+%Y-%m-%d-%H-%M-%S' -d @$(stat -c %Y $solution.e)).out
+
+            echo "Running $(basename $outName)"
+
+            touch $outName
+            timeout $singleRunTimeout ./$solution.e $test /dev/null $defaultBatchSize 2>>$outName
+            echo "" >>$outName
+        done
+        echo
+    done
+fi
+
+exit
+
+if $generateTests; then
+    echo "Generating Tests"
+    . generateTests.sh
+fi
+
+if $generateAnswers; then
+    echo "Generating Answers"
+    . generateAnswers.sh 
+fi
+
+mkdir $resultTimesDir
 
 for toTest in ${solutionsToTest[@]}; do
     make $toTest.e
@@ -25,15 +135,15 @@ for toTest in ${solutionsToTest[@]}; do
     echo $toTest
     for test in $testsDir/*.b.in; do
         test=$(basename $test)
-        outName=timesResults/${toTest}\#${test::-5}\#$(date '+%Y.%m.%d.%H.%M.%S' -d @$(stat -c %Y $toTest.e)).out
+        outName=$resultTimesDir/${toTest}\#${test::-5}\#$(date '+%Y.%m.%d.%H.%M.%S' -d @$(stat -c %Y $toTest.e)).out
         touch $outName
 
         echo -n "Running ${test}"
         echo ""
 
-        for i in $(seq 1 $repeatTimes); do
+        for i in $(seq 1 $repeatSingleTest); do
             #progress bar
-            progress=$(($i*$progressBarWidth/$repeatTimes))
+            progress=$(($i*$progressBarWidth/$repeatSingleTest))
             bar="|"
             for k in $(seq 1 $progress); do
                 bar=$bar"#"
