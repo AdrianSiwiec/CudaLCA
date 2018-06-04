@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
+#include <math.h>
 #include <iostream>
 #include <moderngpu/transform.hxx>
 #include "commons.h"
@@ -75,10 +76,17 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   Timer listTimer( "List Rank" );
   int s;
   if ( N > 1000000 )
-    s = 800;
+  {
+    double tmp = N;
+    tmp /= log2( N );
+    tmp /= log2( N );
+    s = tmp;
+  }
   else
     s = N / 100;
   if ( s == 0 ) s = 1;
+
+  cerr << s << endl;
 
 
   int *devSum;
