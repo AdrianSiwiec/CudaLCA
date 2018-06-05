@@ -24,6 +24,7 @@ validityTestsSizes=(
 validityGraspSize=-1
 validityOutGenerator="cpuRmqLCA"
 validitySolutionToTest="cudaInlabelLCA"
+# validitySolutionToTest="cudaSimpleLCA"
 
 runE1=true
 # runE1=false
@@ -44,11 +45,11 @@ E1TestSizes=(
     10000000
     15000000
     20000000
-    25000000
+    # 25000000
     30000000
     40000000
     50000000
-    60000000
+    # 60000000
     70000000
     # 80000000
     # 90000000
@@ -61,13 +62,12 @@ E1GraspSizes=( #how far up a father can be
 E1DifferentSeeds=3
 
 # runE2=true
-
-runE2=true
-E2PurgeExistingTests=true
-# E2PurgeExistingTests=false
+runE2=false
+# E2PurgeExistingTests=true
+E2PurgeExistingTests=false
 E2SolutionsToTest=(
     "cudaInlabelLCA"
-    "cpuRmqLCA"
+    # "cpuRmqLCA"
 )
 E2TestsDir=$testsDir/E2
 E2ResultsDir=$resultTimesDir/E2
@@ -89,12 +89,12 @@ E2BatchSizes=(
     10000000
 )
 
-runE3=true
+runE3=false
 # runE3=true
-E3PurgeExistingTests=true
+E3PurgeExistingTests=false
 E3SolutionsToTest=(
     "cudaInlabelLCA"
-    "cudaSimpleLCA"
+    # "cudaSimpleLCA"
 )
 E3TestsDir=$testsDir/E3
 E3ResultsDir=$resultTimesDir/E3
@@ -111,6 +111,36 @@ E3GraspSizes=(
     1000000
 )
 E3DifferentSeeds=5
+
+
+# runE4=true
+runE4=false
+# E2PurgeExistingTests=true
+E4PurgeExistingTests=false
+E4SolutionsToTest=(
+    "cudaInlabelLCA"
+)
+E4TestsDir=$testsDir/E4
+E4ResultsDir=$resultTimesDir/E4
+E4TestSizes=(
+    1000000
+    2000000
+    4000000
+    8000000
+    16000000
+    32000000
+    64000000
+)
+E4S=(
+    800
+    1600
+    3200
+    6400
+    12800
+    25600
+)
+E4DifferentSeeds=5
+
 
 
 

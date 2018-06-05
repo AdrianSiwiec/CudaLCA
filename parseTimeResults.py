@@ -142,9 +142,9 @@ for testName in testNames:
 experimentName=os.path.basename(os.path.dirname(resultsDirectory))
 
 if experimentName=="E1":
-    testsParameters = ["V"]
-    # testsConstraints = [{"grasp": -1}]
-    testsConstraints = [{"grasp": 10}]
+    testsParameters = ["V", "V"]
+    testsConstraints = [{"grasp": -1}, {"grasp":10}]
+    # testsConstraints = [{"grasp": 10}]
     testsParametersValues = []
 elif experimentName=="E2":
     testsParameters = ["batch"]
@@ -153,6 +153,12 @@ elif experimentName=="E2":
 elif experimentName=="E3":
     testsParameters = ["grasp"]
     testsConstraints = [{}]
+    testsParametersValues = []
+elif experimentName=="E4":
+    # testsParameters = ["V", "V", "V", "V", "V", "V"]
+    # testsConstraints = [{"S":800},{"S":1600},{"S":3200},{"S":6400},{"S":12800},{"S":25600},]
+    testsParameters = ["S", "S", "S", "S", "S", "S", "S"]
+    testsConstraints = [{"V":1000000},{"V":2000000},{"V":4000000},{"V":8000000},{"V":16000000},{"V":32000000},{"V":64000000},]
     testsParametersValues = []
 else:
     print("Only E1, E2, E3 supported for now")
@@ -173,10 +179,13 @@ for i, name in enumerate(testsParameters):
 print("Results of experiment: " + experimentName)
 
 sectionNames = ["Preprocessing", "AvgQueryTime(ns)"]
+# sectionNames=["LR1", "LR2"]
 # sectionNames = ["Preprocessing", "AvgQueryTime(ns)", "List Rank"]
 
 for i, param in enumerate(testsParameters):
     print("Results by " + param+",")
+    if len(testsConstraints[i]) > 0:
+        print("Test Constraints: "+str(testsConstraints[i]))
     for sectionName in sectionNames:
         print(sectionName +",", end="")
         for paramValue in testsParametersValues[i]:

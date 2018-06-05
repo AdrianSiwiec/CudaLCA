@@ -7,12 +7,17 @@
 using namespace std;
 using namespace mgpu;
 
-__global__ void cuCalcQueries( int Q, int *father, int *depth, int *queries, int *answers );
+__global__ void cuCalcQueries( int Q,
+                               const int *__restrict__ father,
+                               const int *__restrict__ depth,
+                               const int *__restrict__ queries,
+                               int *answers );
 
 int main( int argc, char *argv[] )
 {
   Timer timer = Timer( "Parse Input" );
 
+  cudaSetDevice( 0 );
   standard_context_t context( 0 );
 
   TestCase tc;
@@ -47,12 +52,15 @@ int main( int argc, char *argv[] )
   int blockPerGridX = ( V + threadsPerBlockX - 1 ) / threadsPerBlockX;
 
   transform(
-      [=] MGPU_DEVICE( int thid ) {
+      [] MGPU_DEVICE( int thid, const int *devFather, int *devDepth, int *devNext ) {
         devNext[thid] = devFather[thid];
         devDepth[thid] = 0;
       },
       V,
-      context );
+      context,
+      devFather,
+      devDepth,
+      devNext );
 
   context.synchronize();
 
@@ -100,7 +108,11 @@ int main( int argc, char *argv[] )
   timer.setPrefix( "" );
 }
 
-__global__ void cuCalcQueries( int Q, int *father, int *depth, int *queries, int *answers )
+__global__ void cuCalcQueries( int Q,
+                               const int *__restrict__ father,
+                               const int *__restrict__ depth,
+                               const int *__restrict__ queries,
+                               int *answers )
 {
   int thid = ( blockIdx.x * blockDim.x ) + threadIdx.x;
 

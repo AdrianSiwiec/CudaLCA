@@ -115,49 +115,38 @@ if $runE3; then
     done
 fi
 
-exit
+if $runE4; then
+    echo "Running Experiment 4"
 
-if $generateTests; then
+    if $E4PurgeExistingTests; then
+        echo "Purging Existing Tests"
+        rm $E4TestsDir -rf
+    fi
+
     echo "Generating Tests"
-    . generateTests.sh
-fi
+    mkdir -p $E4TestsDir
+    mkdir -p $E4ResultsDir
 
-if $generateAnswers; then
-    echo "Generating Answers"
-    . generateAnswers.sh 
-fi
-
-mkdir $resultTimesDir
-
-for toTest in ${solutionsToTest[@]}; do
-    make $toTest.e
-
-    echo $toTest
-    for test in $testsDir/*.b.in; do
-        test=$(basename $test)
-        outName=$resultTimesDir/${toTest}\#${test::-5}\#$(date '+%Y.%m.%d.%H.%M.%S' -d @$(stat -c %Y $toTest.e)).out
-        touch $outName
-
-        echo -n "Running ${test}"
-        echo ""
-
-        for i in $(seq 1 $repeatSingleTest); do
-            #progress bar
-            progress=$(($i*$progressBarWidth/$repeatSingleTest))
-            bar="|"
-            for k in $(seq 1 $progress); do
-                bar=$bar"#"
-            done
-            for k in $(seq 1 $(($progressBarWidth-$progress))); do
-                bar=$bar"-"
-            done
-            bar=$bar"|"
-            echo -ne "$bar\r"
-            #progress bar end
-    
-            ./$toTest.e $testsDir/$test /dev/null 2>>$outName
-            echo "" >>$outName
-        done
-        echo ""
+    for size in ${E4TestSizes[@]}; do
+            genTest $E4TestsDir b $size $size -1 $E4DifferentSeeds
     done
-done
+
+    for solution in ${E4SolutionsToTest[@]}; do
+        make $solution.e
+        echo "Testing $solution"
+        for test in $E4TestsDir/*.b.in; do
+            for s in ${E4S[@]}; do
+                testName=$(basename $test)
+                testOutName=$(echo $testName | sed 's/s[0-9][0-9]*.//g')
+                outName=$E4ResultsDir/$solution\$S:$s#${testOutName::-5}\$$(date '+%Y-%m-%d-%H-%M-%S' -d @$(stat -c %Y $solution.e)).out
+
+                echo "Running $(basename $outName)"
+
+                touch $outName
+                timeout $singleRunTimeout ./$solution.e $test /dev/null $defaultBatchSize $s 2>>$outName
+                echo "" >>$outName
+            done
+        done
+        echo
+    done
+fi

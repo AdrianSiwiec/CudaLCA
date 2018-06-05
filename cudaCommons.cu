@@ -11,6 +11,8 @@
 using namespace std;
 using namespace mgpu;
 
+const int measureTimeDebug = false;
+
 __device__ int cuAbs( int i );
 
 void CudaSimpleListRank( int *devRank, int N, int *devNext, standard_context_t &context )
@@ -25,14 +27,20 @@ void CudaSimpleListRank( int *devRank, int N, int *devNext, standard_context_t &
   CUCHECK( cudaMalloc( (void **) &devNotAllDone, sizeof( int ) ) );
 
   transform(
-      [=] MGPU_DEVICE( int thid ) { devRankNext[thid] = ( ( (ull) 0 ) << 32 ) + devNext[thid] + 1; }, N, context );
+      [] MGPU_DEVICE( int thid, ull *devRankNext, const int *devNext ) {
+        devRankNext[thid] = ( ( (ull) 0 ) << 32 ) + devNext[thid] + 1;
+      },
+      N,
+      context,
+      devRankNext,
+      devNext );
 
-  const int loopsWithoutSync = 10;
+  const int loopsWithoutSync = 5;
 
   do
   {
     transform(
-        [=] MGPU_DEVICE( int thid ) {
+        [] MGPU_DEVICE( int thid, int loopsWithoutSync, ull *devRankNext, int *devNotAllDone ) {
           ull rankNext = devRankNext[thid];
           for ( int i = 0; i < loopsWithoutSync; i++ )
           {
@@ -56,15 +64,22 @@ void CudaSimpleListRank( int *devRank, int N, int *devNext, standard_context_t &
           }
         },
         N,
-        context );
+        context,
+        loopsWithoutSync,
+        devRankNext,
+        devNotAllDone );
 
     context.synchronize();
 
     CUCHECK( cudaMemcpy( notAllDone, devNotAllDone, sizeof( int ), cudaMemcpyDeviceToHost ) );
   } while ( *notAllDone );
 
-  transform( [=] MGPU_DEVICE( int thid ) { devRank[thid] = devRankNext[thid] >> 32; }, N, context );
-  context.synchronize();
+  transform(
+      [] MGPU_DEVICE( int thid, const ull *devRankNext, int *devRank ) { devRank[thid] = devRankNext[thid] >> 32; },
+      N,
+      context,
+      devRankNext,
+      devRank );
 
   cudaFree( notAllDone );
   cudaFree( devRankNext );
@@ -73,14 +88,10 @@ void CudaSimpleListRank( int *devRank, int N, int *devNext, standard_context_t &
 
 void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_context_t &context )
 {
-  Timer listTimer( "List Rank" );
   int s;
-  if ( N > 1000000 )
+  if ( N >= 100000 )
   {
-    double tmp = N;
-    tmp /= log2( N );
-    tmp /= log2( N );
-    s = tmp;
+    s = sqrt( N ) * 1.6; //Based on experimental results.
   }
   else
     s = N / 100;
@@ -89,6 +100,7 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   cerr << s << endl;
 
 
+  Timer listTimer( "LR1" );
   int *devSum;
   CUCHECK( cudaMalloc( (void **) &devSum, sizeof( int ) * ( s + 1 ) ) );
   int *devSublistHead;
@@ -98,10 +110,10 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
   int *devLast;
   CUCHECK( cudaMalloc( (void **) &devLast, sizeof( int ) * ( s + 1 ) ) );
 
-  listTimer.measureTime( "Device Allocs" );
+  if ( measureTimeDebug ) listTimer.measureTime( "Device Allocs" );
 
   transform(
-      [=] MGPU_DEVICE( int i ) {
+      [] MGPU_DEVICE( int i, int N, int s, int head, int *devNext, int *devSublistHead ) {
         curandState state;
         curand_init( 123, i, 0, &state );
 
@@ -123,13 +135,27 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
         }
       },
       s,
-      context );
+      context,
+      N,
+      s,
+      head,
+      devNext,
+      devSublistHead );
 
-  context.synchronize();
-  listTimer.measureTime( "GPU generating splitters" );
+  if ( measureTimeDebug )
+  {
+    context.synchronize();
+    listTimer.measureTime( "GPU generating splitters" );
+  }
 
   transform(
-      [=] MGPU_DEVICE( int thid ) {
+      [] MGPU_DEVICE( int thid,
+                      const int *devSublistHead,
+                      const int *devNext,
+                      int *devRank,
+                      int *devSum,
+                      int *devLast,
+                      int *devSublistId ) {
         int current = devSublistHead[thid];
         int counter = 0;
 
@@ -150,13 +176,23 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
         }
       },
       s + 1,
-      context );
-  context.synchronize();
+      context,
+      devSublistHead,
+      devNext,
+      devRank,
+      devSum,
+      devLast,
+      devSublistId );
 
-  listTimer.measureTime( "GPU sublist rank calculation" );
+  if ( measureTimeDebug )
+  {
+    context.synchronize();
+    listTimer.measureTime( "GPU sublist rank calculation" );
+    listTimer.setPrefix( "LR2" );
+  }
 
   transform(
-      [=] MGPU_DEVICE( int thid ) {
+      [] MGPU_DEVICE( int thid, int head, int s, const int *devNext, const int *devLast, int *devSum ) {
         int tmpSum = 0;
         int current = head;
         int currentSublist = 0;
@@ -170,28 +206,45 @@ void CudaFastListRank( int *devRank, int N, int head, int *devNext, standard_con
         }
       },
       1,
-      context );
+      context,
+      head,
+      s,
+      devNext,
+      devLast,
+      devSum );
 
-  context.synchronize();
-  listTimer.measureTime( "GPU Adding Times" );
+  if ( measureTimeDebug )
+  {
+    context.synchronize();
+    listTimer.measureTime( "GPU Adding Times" );
+    listTimer.setPrefix( "LR3" );
+  }
 
   transform(
-      [=] MGPU_DEVICE( int thid ) {
+      [] MGPU_DEVICE( int thid, const int *devSublistId, const int *devSum, int *devRank ) {
         int sublistId = devSublistId[thid];
         devRank[thid] += devSum[sublistId];
       },
       N,
-      context );
-  context.synchronize();
+      context,
+      devSublistId,
+      devSum,
+      devRank );
 
-  listTimer.measureTime( "GPU final rank" );
+  if ( measureTimeDebug )
+  {
+    context.synchronize();
+    listTimer.measureTime( "GPU final rank" );
+  }
 
   CUCHECK( cudaFree( devSum ) );
   CUCHECK( cudaFree( devSublistHead ) );
   CUCHECK( cudaFree( devSublistId ) );
   CUCHECK( cudaFree( devLast ) );
 
-  listTimer.measureTime( "Free moemory" );
+  if ( measureTimeDebug ) listTimer.measureTime( "Free moemory" );
+
+  context.synchronize();
   listTimer.setPrefix( "" );
 }
 
