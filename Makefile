@@ -12,6 +12,9 @@ cpuSimpleLCA.e: cpuSimpleLCA.o commons.o
 cpuRmqLCA.e: cpuRmqLCA.o commons.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
+cpuInlabelLCA.e: cpuInlabelLCA.o commons.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
 cudaInlabelLCA.e: cudaInlabelLCA.cu commons.o cudaCommons.o
 	$(NVCC) $(NVCCFLAGS) $^ -o $@
 
