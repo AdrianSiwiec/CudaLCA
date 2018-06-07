@@ -143,7 +143,7 @@ experimentName=os.path.basename(os.path.dirname(resultsDirectory))
 
 if experimentName=="E1":
     testsParameters = ["V", "V"]
-    testsConstraints = [{"grasp": -1}, {"grasp":10}]
+    testsConstraints = [{"grasp": -1}, {"grasp":1000}]
     # testsConstraints = [{"grasp": 10}]
     testsParametersValues = []
 elif experimentName=="E2":
@@ -178,7 +178,7 @@ for i, name in enumerate(testsParameters):
 
 print("Results of experiment: " + experimentName)
 
-sectionNames = ["Preprocessing", "AvgQueryTime(ns)"]
+sectionNames = ["Preprocessing", "AvgQueryTime(ns)", "Queries"]
 # sectionNames=["LR1", "LR2"]
 # sectionNames = ["Preprocessing", "AvgQueryTime(ns)", "List Rank"]
 

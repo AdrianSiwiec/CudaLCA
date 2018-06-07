@@ -5,6 +5,7 @@
 #include <moderngpu/transform.hxx>
 #include "commons.h"
 #include "cudaCommons.h"
+#include <cudaWeiJaJaListRank.h>
 
 #define ll long long
 
@@ -157,7 +158,7 @@ int main( int argc, char *argv[] )
   }
 
   // CudaSimpleListRank( devEdgeRank, V * 2, devNextEdge, context);
-  CudaFastListRank( devEdgeRank, V * 2, getEdgeCode( root, 0 ), devNextEdge, context );
+  cudaWeiJaJaListRank( devEdgeRank, V * 2, getEdgeCode( root, 0 ), devNextEdge, context );
 
   CUCHECK( cudaFree( devNextEdge ) );
 

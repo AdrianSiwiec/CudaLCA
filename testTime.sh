@@ -15,7 +15,7 @@ if $runE1; then
 
     for size in ${E1TestSizes[@]}; do
         for graspSize in ${E1GraspSizes[@]}; do
-            genTest $E1TestsDir b $size $(($size/10)) $graspSize $E1DifferentSeeds
+            genTest $E1TestsDir b $size $(($size)) $graspSize $E1DifferentSeeds
         done
     done
 

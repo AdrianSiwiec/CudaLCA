@@ -1,5 +1,5 @@
 NVCC=/usr/local/cuda/bin/nvcc
-NVCCFLAGS=-std=c++11 -arch sm_50 -O2 --expt-extended-lambda -I ./3rdparty/moderngpu/src
+NVCCFLAGS=-std=c++11 -arch sm_50 -O2 --expt-extended-lambda -I ./3rdparty/moderngpu/src -I ./3rdparty/cudaWeiJaJaListRank
 
 CXX=g++
 CXXFLAGS=-std=c++11 -O2 -fno-stack-protector 
@@ -15,7 +15,7 @@ cpuRmqLCA.e: cpuRmqLCA.o commons.o
 cpuInlabelLCA.e: cpuInlabelLCA.o commons.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
-cudaInlabelLCA.e: cudaInlabelLCA.cu commons.o cudaCommons.o
+cudaInlabelLCA.e: cudaInlabelLCA.cu commons.o cudaCommons.o ./3rdparty/cudaWeiJaJaListRank/cudaWeiJaJaListRank.o
 	$(NVCC) $(NVCCFLAGS) $^ -o $@
 
 cudaSimpleLCA.e: cudaSimpleLCA.cu commons.o cudaCommons.o

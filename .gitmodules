@@ -1,3 +1,6 @@
 [submodule "3rdparty/moderngpu"]
 	path = 3rdparty/moderngpu
 	url = git@github.com:moderngpu/moderngpu.git
+[submodule "3rdparty/cudaWeiJaJaListRank"]
+	path = 3rdparty/cudaWeiJaJaListRank
+	url = git@bitbucket.org:pierreSquared/cudaweijajalistrank.git

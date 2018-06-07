@@ -19,11 +19,22 @@ int main( int argc, char *argv[] )
   {
     tc = readFromFile( argv[1] );
   }
+
+  cout << basename( argv[1] ) << endl;
+
   int V = tc.tree.V;
   int root = tc.tree.root;
   vector<int> &father = tc.tree.father;
-  vector<int> &son = tc.tree.son;
-  vector<int> &neighbour = tc.tree.neighbour;
+
+  vector<vector<int> > sons( V );
+
+  for ( int i = 0; i < V; i++ )
+  {
+    if ( father[i] != -1 )
+    {
+      sons[father[i]].push_back( i );
+    }
+  }
 
   vector<int> depth( V );
   depth[root] = 0;
@@ -42,7 +53,7 @@ int main( int argc, char *argv[] )
     int v = q.front();
     q.pop();
 
-    if ( son[v] == -1 )
+    if ( sons[v].size() == 0 )
     {
       numOfLeafs++;
       leafsOfDepth[depth[v]]++;
@@ -51,46 +62,44 @@ int main( int argc, char *argv[] )
     }
     verticesOfDepth[depth[v]]++;
 
-    for ( int i = son[v]; i != -1; i = neighbour[i] )
+    for ( int i = 0; i <sons[v].size(); i++ )
     {
-      depth[i] = depth[v] + 1;
-      q.push( i );
+      depth[sons[v][i]] = depth[v] + 1;
+      q.push( sons[v][i] );
     }
   }
 
   int leafsSoFar = 0;
   int verticesSoFar = 0;
 
-  vector<pair<int, int> > leafsToPrint;
-  vector<pair<int, int> > verticesToPrint;
+  // vector<pair<int, int> > leafsToPrint;
+  // vector<pair<int, int> > verticesToPrint;
 
-  int statsSize = 100;
+  // int statsSize = 100;
 
-  for ( int i = 0; i < maxLeafDepth + 1; i++ )
-  {
-    leafsSoFar += leafsOfDepth[i];
-    verticesSoFar += verticesOfDepth[i];
+  // for ( int i = 0; i < maxLeafDepth + 1; i++ )
+  // {
+  //   leafsSoFar += leafsOfDepth[i];
+  //   verticesSoFar += verticesOfDepth[i];
 
-    if ( maxLeafDepth < statsSize || i % ( maxLeafDepth / statsSize ) == 0 )
-    {
-      leafsToPrint.push_back( make_pair( i, leafsSoFar ) );
-      verticesToPrint.push_back( make_pair( i, verticesSoFar ) );
-    }
-  }
-  leafsToPrint.push_back( make_pair( maxLeafDepth-1, leafsSoFar ) );
-  verticesToPrint.push_back( make_pair( maxLeafDepth-1, verticesSoFar ) );
+  //   if ( maxLeafDepth < statsSize || i % ( maxLeafDepth / statsSize ) == 0 )
+  //   {
+  //     leafsToPrint.push_back( make_pair( i, leafsSoFar ) );
+  //     verticesToPrint.push_back( make_pair( i, verticesSoFar ) );
+  //   }
+  // }
+  // leafsToPrint.push_back( make_pair( maxLeafDepth-1, leafsSoFar ) );
+  // verticesToPrint.push_back( make_pair( maxLeafDepth-1, verticesSoFar ) );
 
 
-  cout << basename( argv[1] ) << ","
-       << "V: " << V << ",leafs: " << numOfLeafs << endl;
 
-  printCsvTab( leafsToPrint, "Leafs Depth", "Depth", "Leafs" );
+  // printCsvTab( leafsToPrint, "Leafs Depth", "Depth", "Leafs" );
 
-  cout << endl;
+  // cout << endl;
 
-  printCsvTab( verticesToPrint, "Vetices Depth", "Depth", "Vertices" );
+  // printCsvTab( verticesToPrint, "Vetices Depth", "Depth", "Vertices" );
 
-  cout << endl << endl;
+  cout << maxLeafDepth << endl;
 }
 void printCsvTab( vector<pair<int, int> > &tab, string name, string firstRow, string secondRow )
 {
